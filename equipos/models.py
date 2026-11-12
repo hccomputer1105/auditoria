@@ -203,3 +203,66 @@ class EvaluacionMarketing(models.Model):
 
     def __str__(self):
         return f"Auditoría Marketing - {self.usuario_empresa.username}"
+
+    # 5. TABLA DE EVALUACIÓN DE CARGA LABORAL Y DIMENSIONAMIENTO DE PUESTOS
+class EvaluacionCargaLaboral(models.Model):
+    FRECUENCIA_CHOICES = [
+        (0, '0 - Nunca / No aplica'),
+        (1, '1 - Rara vez (Ocasional)'),
+        (2, '2 - A veces (Semanalmente)'),
+        (3, '3 - Frecuentemente (Casi a diario)'),
+        (4, '4 - Siempre (Constante / Crítico)'),
+    ]
+
+    usuario_empresa = models.ForeignKey(User, on_delete=models.CASCADE)
+    fecha_evaluacion = models.DateTimeField(auto_now_add=True)
+
+    # Identificación del Puesto
+    nombre_colaborador = models.CharField("Nombre del Colaborador", max_length=120)
+    cargo_actual = models.CharField("Cargo Oficial", max_length=120)
+    departamento = models.CharField("Departamento", max_length=100)
+    roles_adicionales = models.CharField("Otros roles que desempeña en la práctica", max_length=255, blank=True, null=True)
+
+    # Dimensión 1: Multifuncionalidad y Dispersión de Roles (Efecto 3 en 1)
+    c1_1 = models.IntegerField("1.1 Desempeña funciones de 2 o más cargos distintos", choices=FRECUENCIA_CHOICES, default=0)
+    c1_2 = models.IntegerField("1.2 Asume tareas residuales que nadie más quiere o sabe hacer", choices=FRECUENCIA_CHOICES, default=0)
+    c1_3 = models.IntegerField("1.3 Cambia abruptamente de contexto entre tareas operativas y estratégicas", choices=FRECUENCIA_CHOICES, default=0)
+
+    # Dimensión 2: Volumen de Trabajo y Presión Temporal
+    c2_1 = models.IntegerField("2.1 La jornada laboral normal (8h) es insuficiente para cumplir metas", choices=FRECUENCIA_CHOICES, default=0)
+    c2_2 = models.IntegerField("2.2 Trabaja horas extras, fines de semana o fuera de horario", choices=FRECUENCIA_CHOICES, default=0)
+    c2_3 = models.IntegerField("2.3 Acumula tareas pendientes (backlog) que crecen cada semana", choices=FRECUENCIA_CHOICES, default=0)
+
+    # Dimensión 3: Cuellos de Botella y Dependencia Crítica
+    c3_1 = models.IntegerField("3.1 Si se ausenta o enferma, los procesos clave se detienen", choices=FRECUENCIA_CHOICES, default=0)
+    c3_2 = models.IntegerField("3.2 No cuenta con un respaldo (backup humano) capacitado para cubrirlo", choices=FRECUENCIA_CHOICES, default=0)
+    c3_3 = models.IntegerField("3.3 Múltiples departamentos dependen simultáneamente de sus entregas", choices=FRECUENCIA_CHOICES, default=0)
+
+    # Dimensión 4: Desgaste Cognitivo y Riesgo Psicosocial
+    c4_1 = models.IntegerField("4.1 Sufre interrupciones constantes (llamadas, chats, urgencias)", choices=FRECUENCIA_CHOICES, default=0)
+    c4_2 = models.IntegerField("4.2 Omite pausas activas o tiempo de almuerzo por carga operativa", choices=FRECUENCIA_CHOICES, default=0)
+    c4_3 = models.IntegerField("4.3 Reporta agotamiento mental, estrés alto o aumento de errores", choices=FRECUENCIA_CHOICES, default=0)
+
+    def puntaje_total(self):
+        return (self.c1_1 + self.c1_2 + self.c1_3 +
+                self.c2_1 + self.c2_2 + self.c2_3 +
+                self.c3_1 + self.c3_2 + self.c3_3 +
+                self.c4_1 + self.c4_2 + self.c4_3)
+
+    def porcentaje_saturacion(self):
+        return round((self.puntaje_total() / 48) * 100)
+
+    def personas_equivalentes(self):
+        # Estimación de FTE (Full-Time Equivalent) basada en saturación
+        pct = self.porcentaje_saturacion()
+        if pct <= 35:
+            return "1.0 persona (Óptimo)"
+        elif pct <= 55:
+            return "1.5 personas (Sobrecarga leve)"
+        elif pct <= 75:
+            return "2.0 personas (Doble carga)"
+        else:
+            return "2.5 a 3.0+ personas (Crítico)"
+
+    def __str__(self):
+        return f"{self.cargo_actual} ({self.nombre_colaborador}) - {self.porcentaje_saturacion()}%"

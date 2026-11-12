@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Computadora, Perfil, EvaluacionISO
 from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing
+from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_view(request):
@@ -430,3 +431,51 @@ def dashboard_marketing_view(request):
         'race_fases': race_fases,
     }
     return render(request, 'equipos/dashboard_marketing.html', context)
+@login_required(login_url='/cuentas/login/')
+def carga_laboral_view(request):
+    if request.method == 'POST':
+        nueva_carga = EvaluacionCargaLaboral(
+            usuario_empresa=request.user,
+            nombre_colaborador=request.POST.get('nombre_colaborador'),
+            cargo_actual=request.POST.get('cargo_actual'),
+            departamento=request.POST.get('departamento'),
+            roles_adicionales=request.POST.get('roles_adicionales', ''),
+            c1_1=int(request.POST.get('c1_1', 0)),
+            c1_2=int(request.POST.get('c1_2', 0)),
+            c1_3=int(request.POST.get('c1_3', 0)),
+            c2_1=int(request.POST.get('c2_1', 0)),
+            c2_2=int(request.POST.get('c2_2', 0)),
+            c2_3=int(request.POST.get('c2_3', 0)),
+            c3_1=int(request.POST.get('c3_1', 0)),
+            c3_2=int(request.POST.get('c3_2', 0)),
+            c3_3=int(request.POST.get('c3_3', 0)),
+            c4_1=int(request.POST.get('c4_1', 0)),
+            c4_2=int(request.POST.get('c4_2', 0)),
+            c4_3=int(request.POST.get('c4_3', 0)),
+        )
+        nueva_carga.save()
+        return redirect('carga_laboral')
+
+    evaluaciones = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
+    
+    # Resumen estadístico para el encabezado
+    total_evaluados = evaluaciones.count()
+    criticos = sum(1 for e in evaluaciones if e.porcentaje_saturacion() > 65)
+    moderados = sum(1 for e in evaluaciones if 35 < e.porcentaje_saturacion() <= 65)
+    optimos = sum(1 for e in evaluaciones if e.porcentaje_saturacion() <= 35)
+
+    context = {
+        'evaluaciones': evaluaciones,
+        'total_evaluados': total_evaluados,
+        'criticos': criticos,
+        'moderados': moderados,
+        'optimos': optimos,
+    }
+    return render(request, 'equipos/carga_laboral.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+def eliminar_carga_view(request, id):
+    registro = get_object_or_404(EvaluacionCargaLaboral, id=id, usuario_empresa=request.user)
+    registro.delete()
+    return redirect('carga_laboral')

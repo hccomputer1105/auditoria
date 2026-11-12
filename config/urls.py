@@ -7,7 +7,9 @@ from equipos.views import (
     eliminar_equipo, 
     evaluacion_view, 
     evaluacion_marketing_view,
-    dashboard_marketing_view
+    dashboard_marketing_view,
+    carga_laboral_view,
+    eliminar_carga_view
 )
 
 urlpatterns = [
@@ -18,7 +20,9 @@ urlpatterns = [
     path('editar/<int:id>/', editar_equipo, name='editar_equipo'),
     path('eliminar/<int:id>/', eliminar_equipo, name='eliminar_equipo'),
     path('evaluacion/', evaluacion_view, name='evaluacion'),
-    # Rutas exclusivas de Marketing y Ventas:
     path('dashboard-marketing/', dashboard_marketing_view, name='dashboard_marketing'),
     path('evaluacion-marketing/', evaluacion_marketing_view, name='evaluacion_marketing'),
+    # NUEVAS RUTAS DE CARGA LABORAL:
+    path('carga-laboral/', carga_laboral_view, name='carga_laboral'),
+    path('eliminar-carga/<int:id>/', eliminar_carga_view, name='eliminar_carga'),
 ]

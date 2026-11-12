@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Auditoría de Carga Laboral</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #212529; }
+        .nav-link { color: #adb5bd; margin-bottom: 5px; border-radius: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #343a40; }
+        .hr-card { border-left: 4px solid #fd7e14; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- PANEL LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="mb-4 text-center mt-2 fw-bold text-info"><i class="bi bi-shield-check"></i> Auditoría 360°</h4>
+                <hr class="border-secondary">
+                <small class="text-uppercase text-muted fw-bold px-2">Área de Sistemas (TI)</small>
+                <ul class="nav flex-column mb-3 mt-1">
+                    <li class="nav-item"><a href="/" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
+                    <li class="nav-item"><a href="/inventario/" class="nav-link"><i class="bi bi-pc-display me-2"></i> Datos de inventario</a></li>
+                    <li class="nav-item"><a href="/evaluacion/" class="nav-link"><i class="bi bi-clipboard-data me-2"></i> Evaluación TI</a></li>
+                </ul>
+                <hr class="border-secondary">
+                <small class="text-uppercase text-muted fw-bold px-2">Comercial y Marketing</small>
+                <ul class="nav flex-column mb-3 mt-1">
+                    <li class="nav-item"><a href="/dashboard-marketing/" class="nav-link"><i class="bi bi-bar-chart-line me-2"></i> Dashboard Marketing</a></li>
+                    <li class="nav-item"><a href="/evaluacion-marketing/" class="nav-link"><i class="bi bi-megaphone me-2"></i> Evaluación Marketing</a></li>
+                </ul>
+                <hr class="border-secondary">
+                <small class="text-uppercase text-muted fw-bold px-2">Talento y Procesos</small>
+                <ul class="nav flex-column mt-1">
+                    <li class="nav-item"><a href="/carga-laboral/" class="nav-link active"><i class="bi bi-person-lines-fill me-2"></i> Carga Laboral</a></li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <!-- Cabecera -->
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-secondary"><i class="bi bi-speedometer text-warning"></i> Auditoría de Carga Laboral y Dimensionamiento de Puestos</span>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3 fw-bold"><i class="bi bi-person-circle"></i> Hola, {{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Salir</button>
+                        </form>
+                    </div>
+                </nav>
+
+                <!-- Tarjetas de Resumen de Personal -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold text-info">Puestos Evaluados</h6>
+                                <h2 class="fw-bold mb-0">{{ total_evaluados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold">Sobrecarga Crítica (2-3x)</h6>
+                                <h2 class="fw-bold mb-0">{{ criticos }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold">Sobrecarga Moderada (1.5x)</h6>
+                                <h2 class="fw-bold mb-0">{{ moderados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold">Carga Óptima (1.0x)</h6>
+                                <h2 class="fw-bold mb-0">{{ optimos }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLA DE RESULTADOS Y DIAGNÓSTICO FTE -->
+                <div class="card shadow-sm border-0 mb-5">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-table"></i> Diagnóstico de Saturación por Puesto</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Colaborador / Cargo</th>
+                                        <th>Departamento</th>
+                                        <th>Roles Adicionales Detectados</th>
+                                        <th style="width: 22%;">Índice de Saturación</th>
+                                        <th>Carga Equivalente (FTE)</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in evaluaciones %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.nombre_colaborador }}</strong><br>
+                                            <small class="text-muted">{{ item.cargo_actual }}</small>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ item.departamento }}</span></td>
+                                        <td class="small">{{ item.roles_adicionales|default:"Solo funciones del cargo" }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 10px;">
+                                                    <div class="progress-bar {% if item.porcentaje_saturacion > 65 %}bg-danger{% elif item.porcentaje_saturacion > 35 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                         style="width: {{ item.porcentaje_saturacion }}%;"></div>
+                                                </div>
+                                                <span class="fw-bold small">{{ item.porcentaje_saturacion }}%</span>
+                                            </div>
+                                            <small class="text-muted">({{ item.puntaje_total }} / 48 pts)</small>
+                                        </td>
+                                        <td>
+                                            {% if item.porcentaje_saturacion > 65 %}
+                                                <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ item.personas_equivalentes }}</span>
+                                            {% elif item.porcentaje_saturacion > 35 %}
+                                                <span class="badge bg-warning text-dark">{{ item.personas_equivalentes }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ item.personas_equivalentes }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'eliminar_carga' item.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta evaluación laboral?');">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">No hay puestos evaluados aún. Completa el cuestionario inferior para medir la carga laboral.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO DE EVALUACIÓN -->
+                <h4 class="mb-3 text-secondary"><i class="bi bi-clipboard-plus"></i> Evaluar Nuevo Puesto de Trabajo</h4>
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <!-- Datos del Puesto -->
+                    <div class="card shadow-sm border-0 hr-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-dark mb-3">Datos de Identificación del Puesto</h5>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Nombre del Colaborador *</label>
+                                    <input type="text" class="form-control" name="nombre_colaborador" required placeholder="Ej: Carlos Pérez">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Cargo Oficial Contratado *</label>
+                                    <input type="text" class="form-control" name="cargo_actual" required placeholder="Ej: Analista de Soporte TI">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small">Departamento *</label>
+                                    <input type="text" class="form-control" name="departamento" required placeholder="Ej: Tecnología / Administración">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold small">¿Qué otros roles o cargos cubre en la práctica sin ser su función principal?</label>
+                                    <input type="text" class="form-control" name="roles_adicionales" placeholder="Ej: También lleva redes sociales, compras de equipos y soporte telefónico...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guía rápida -->
+                    <div class="alert alert-light border shadow-sm mb-4 small">
+                        <strong>Escala de Frecuencia:</strong> 
+                        <span class="badge bg-success ms-1">0 = Nunca</span> 
+                        <span class="badge bg-info text-dark ms-1">1 = Rara vez</span> 
+                        <span class="badge bg-secondary ms-1">2 = A veces (Semanal)</span> 
+                        <span class="badge bg-warning text-dark ms-1">3 = Frecuentemente</span> 
+                        <span class="badge bg-danger ms-1">4 = Siempre (Constante)</span>
+                    </div>
+
+                    <div class="row">
+                        <!-- Dimensión 1 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 hr-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-dark mb-3">1. Multifuncionalidad (Efecto "3 en 1")</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">1.1 ¿Desempeña funciones que corresponden a 2 o más cargos distintos?</label>
+                                        <select class="form-select form-select-sm" name="c1_1">
+                                            <option value="0">0 - Nunca (Solo cumple su cargo)</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre (Hace el trabajo de varios puestos)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">1.2 ¿Asume tareas residuales ("cajón de sastre") que otros departamentos descartan?</label>
+                                        <select class="form-select form-select-sm" name="c1_2">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label fw-bold small">1.3 ¿Cambia abruptamente de contexto entre tareas operativas y estratégicas en el mismo día?</label>
+                                        <select class="form-select form-select-sm" name="c1_3">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dimensión 2 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 hr-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-dark mb-3">2. Volumen de Trabajo y Presión Temporal</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">2.1 ¿La jornada ordinaria de 8 horas resulta insuficiente para sacar el trabajo diario?</label>
+                                        <select class="form-select form-select-sm" name="c2_1">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">2.2 ¿Trabaja horas extras, fines de semana o responde mensajes fuera de horario?</label>
+                                        <select class="form-select form-select-sm" name="c2_2">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label fw-bold small">2.3 ¿Acumula tareas pendientes (backlog) que se arrastran de una semana a otra?</label>
+                                        <select class="form-select form-select-sm" name="c2_3">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dimensión 3 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 hr-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-dark mb-3">3. Cuellos de Botella y Dependencia Crítica</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">3.1 ¿Si esta persona se enferma o toma vacaciones, procesos clave de la empresa se paralizan?</label>
+                                        <select class="form-select form-select-sm" name="c3_1">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre (Punto único de fallo)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">3.2 ¿Carece de un compañero capacitado (backup humano) que pueda cubrir sus funciones?</label>
+                                        <select class="form-select form-select-sm" name="c3_2">
+                                            <option value="0">0 - Nunca (Tiene relevo)</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre (Nadie más sabe hacer su trabajo)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label fw-bold small">3.3 ¿Múltiples departamentos exigen entregas simultáneas y urgentes a este mismo puesto?</label>
+                                        <select class="form-select form-select-sm" name="c3_3">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dimensión 4 -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 hr-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-dark mb-3">4. Desgaste Cognitivo y Riesgo Psicosocial</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">4.1 ¿Sufre interrupciones constantes (llamadas, chats, soporte inmediato) que impiden concentrarse?</label>
+                                        <select class="form-select form-select-sm" name="c4_1">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">4.2 ¿Omite pausas activas o reduce su hora de almuerzo por exceso de carga operativa?</label>
+                                        <select class="form-select form-select-sm" name="c4_2">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label fw-bold small">4.3 ¿Se observan síntomas de agotamiento mental, estrés crónico o aumento de errores por prisa?</label>
+                                        <select class="form-select form-select-sm" name="c4_3">
+                                            <option value="0">0 - Nunca</option>
+                                            <option value="1">1 - Rara vez</option>
+                                            <option value="2">2 - A veces</option>
+                                            <option value="3">3 - Frecuentemente</option>
+                                            <option value="4">4 - Siempre</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mb-5">
+                        <button type="submit" class="btn btn-warning btn-lg px-5 fw-bold shadow-sm">
+                            <i class="bi bi-calculator"></i> Calcular Carga Laboral y Registrar
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>
