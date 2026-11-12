@@ -2,10 +2,45 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Auditoría</title>
+    <!-- Importar Bootstrap para el diseño profesional -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Bienvenido al Dashboard de Tecnología</h1>
-    <p>Aquí veremos el estatus ISO de nuestros equipos.</p>
+<body class="bg-light">
+
+    <!-- Barra de navegación superior -->
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Sistema de Auditoría IT - Norma ISO 27001</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">Resumen de Equipos</h2>
+        
+        <div class="row">
+            <!-- Tarjeta: Total de Equipos -->
+            <div class="col-md-4 mb-3">
+                <div class="card text-white bg-primary shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Equipos</h5>
+                        <h1 class="display-4">{{ total_equipos }}</h1>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta: Equipos Protegidos -->
+            <div class="col-md-4 mb-3">
+                <div class="card text-white bg-success shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Con Antivirus (ISO A.8.7)</h5>
+                        <h1 class="display-4">{{ con_antivirus }}</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
