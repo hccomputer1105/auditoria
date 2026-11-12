@@ -4,41 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Auditoría</title>
-    <!-- Importar Bootstrap para el diseño profesional -->
+    <!-- Importar Bootstrap para diseño y cuadrícula -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Importar iconos -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        /* CSS para que el panel lateral ocupe el 100% del alto de la pantalla */
+        .sidebar {
+            min-height: 100vh;
+            background-color: #212529; /* Gris oscuro corporativo */
+        }
+        .nav-link {
+            color: #adb5bd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #ffffff;
+            background-color: #343a40;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-    <!-- Barra de navegación superior -->
-    <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand mb-0 h1">Sistema de Auditoría IT - Norma ISO 27001</span>
-        </div>
-    </nav>
-
-    <div class="container">
-        <h2 class="mb-4">Resumen de Equipos</h2>
-        
+    <div class="container-fluid">
         <div class="row">
-            <!-- Tarjeta: Total de Equipos -->
-            <div class="col-md-4 mb-3">
-                <div class="card text-white bg-primary shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Total de Equipos</h5>
-                        <h1 class="display-4">{{ total_equipos }}</h1>
-                    </div>
-                </div>
+            
+            <!-- 1. PANEL LATERAL IZQUIERDO (SIDEBAR) -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="mb-4 text-center mt-2 fw-bold text-info">
+                    <i class="bi bi-shield-check"></i> Auditoría IT
+                </h4>
+                <hr class="border-secondary">
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active">
+                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/inventario/" class="nav-link">
+                            <i class="bi bi-pc-display me-2"></i> Datos de inventario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/evaluacion/" class="nav-link">
+                            <i class="bi bi-clipboard-data me-2"></i> Evaluación
+                        </a>
+                    </li>
+                    <li class="nav-item mt-4">
+                        <a href="#" class="nav-link">
+                            <i class="bi bi-gear me-2"></i> Configuración
+                        </a>
+                    </li>
+                </ul>
             </div>
 
-            <!-- Tarjeta: Equipos Protegidos -->
-            <div class="col-md-4 mb-3">
-                <div class="card text-white bg-success shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Con Antivirus (ISO A.8.7)</h5>
-                        <h1 class="display-4">{{ con_antivirus }}</h1>
+            <!-- 2. ÁREA PRINCIPAL DERECHA (CONTENIDO) -->
+            <div class="col-md-10 p-4">
+                
+                <!-- Cabecera superior -->
+            
+<nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+    <span class="navbar-brand mb-0 h4 text-secondary">Estado actual bajo Norma ISO 27001</span>
+    
+    <div class="d-flex align-items-center">
+        <!-- Muestra el nombre real del usuario -->
+        <span class="text-muted me-3 fw-bold">
+            <i class="bi bi-person-circle"></i> Hola, {{ user.username }}
+        </span>
+        
+        <!-- Botón seguro de cerrar sesión -->
+        <form method="post" action="{% url 'logout' %}" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i> Salir
+            </button>
+        </form>
+    </div>
+</nav>
+
+                <h3 class="mb-4">Resumen General</h3>
+                
+                <!-- Tarjetas de métricas -->
+                <div class="row">
+                    <!-- Tarjeta: Total de Equipos -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-white bg-primary shadow border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-uppercase text-white-50">Equipos Registrados</h6>
+                                <h1 class="display-4 fw-bold">{{ total_equipos }}</h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta: Equipos Protegidos -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card text-white bg-success shadow border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-uppercase text-white-50">Antivirus Activo (ISO A.8.7)</h6>
+                                <h1 class="display-4 fw-bold">{{ con_antivirus }}</h1>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
             </div>
+
         </div>
     </div>
 

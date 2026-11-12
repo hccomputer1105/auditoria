@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Inventario</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #212529; }
+        .nav-link { color: #adb5bd; margin-bottom: 5px; border-radius: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #343a40; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- 1. PANEL LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="mb-4 text-center mt-2 fw-bold text-info"><i class="bi bi-shield-check"></i> Auditoría IT</h4>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a href="/" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a href="/inventario/" class="nav-link active"><i class="bi bi-pc-display me-2"></i> Datos de inventario</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-clipboard-data me-2"></i> Evaluación</a></li>
+                    <li class="nav-item mt-4"><a href="#" class="nav-link"><i class="bi bi-gear me-2"></i> Configuración</a></li>
+                </ul>
+            </div>
+
+            <!-- 2. ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <!-- Cabecera superior con botón de salir -->
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-secondary">Gestión de Inventario</span>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3 fw-bold">
+                            <i class="bi bi-person-circle"></i> Hola, {{ user.username }}
+                        </span>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-box-arrow-right"></i> Salir
+                            </button>
+                        </form>
+                    </div>
+                </nav>
+
+                <!-- 3. FORMULARIO DE INVENTARIO -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <form method="POST">
+                            {% csrf_token %}
+                            
+                            <!-- Desplegables de Tipo y Estatus -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Clasificación de Hardware</label>
+                                    <select class="form-select bg-light" name="tipo_equipo">
+                                        <option value="Computadora">Computadora (Torre/Laptop)</option>
+                                        <option value="Monitor">Monitor</option>
+                                        <option value="Teclado">Teclado</option>
+                                        <option value="Mouse">Mouse</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Estatus Físico</label>
+                                    <select class="form-select bg-light" name="estatus">
+                                        <option value="Bueno">Óptimo / Bueno</option>
+                                        <option value="En reparación">En reparación / Mantenimiento</option>
+                                        <option value="Malo">Dañado / Para desincorporar</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Checklist de Programas -->
+                            <h5 class="fw-bold mt-4 mb-3 text-primary"><i class="bi bi-boxes"></i> Software Instalado</h5>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkAntivirus" name="tiene_antivirus">
+                                        <label class="form-check-label" for="chkAntivirus">Antivirus Activo</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkAnydesk" name="prog_anydesk">
+                                        <label class="form-check-label" for="chkAnydesk">AnyDesk</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkWinrar" name="prog_winrar">
+                                        <label class="form-check-label" for="chkWinrar">WinRAR / ZIP</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkPdf" name="prog_pdf">
+                                        <label class="form-check-label" for="chkPdf">Lector PDF</label>
+                                    </div>
+                                </div>
+
+                                <!-- Detalle de Office -->
+                                <div class="col-md-4 p-3 bg-light rounded border">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkOffice" name="prog_office">
+                                        <label class="form-check-label fw-bold" for="chkOffice">Microsoft Office</label>
+                                    </div>
+                                    <input type="text" class="form-control" name="version_office" placeholder="Versión (Ej: 2019, 365, LTSC)">
+                                </div>
+                            </div>
+<hr>
+
+                            <!-- Sección de Licencias -->
+                            <h5 class="fw-bold mt-4 mb-3 text-success"><i class="bi bi-key"></i> Gestión de Licencias</h5>
+                            
+                            <div class="row mb-4">
+                                <!-- Licencia Office -->
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkLicOffice" name="licencia_office">
+                                        <label class="form-check-label" for="chkLicOffice">Licencia de Office</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Licencia Windows -->
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkLicWindows" name="licencia_windows" onchange="toggleWindows()">
+                                        <label class="form-check-label" for="chkLicWindows">Licencia de Windows</label>
+                                    </div>
+                                    <div id="divWindows" style="display: none;" class="mt-2 p-2 bg-light border rounded">
+                                        <input type="text" class="form-control" name="version_windows" placeholder="Versión (Ej: Windows 11 Pro)">
+                                    </div>
+                                </div>
+
+                                <!-- Licencia ERP -->
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-5 mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chkLicErp" name="licencia_erp" onchange="toggleErp()">
+                                        <label class="form-check-label" for="chkLicErp">Sistema Administrativo</label>
+                                    </div>
+                                    <div id="divErp" style="display: none;" class="mt-2 p-2 bg-light border rounded">
+                                        <select class="form-select" name="tipo_erp">
+                                            <option value="">Seleccione el sistema...</option>
+                                            <option value="SAP">SAP</option>
+                                            <option value="Galac">Galac</option>
+                                            <option value="Profit">Profit Plus</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Script para desplegar menús -->
+                            <script>
+                                function toggleWindows() {
+                                    document.getElementById('divWindows').style.display = document.getElementById('chkLicWindows').checked ? 'block' : 'none';
+                                }
+                                function toggleErp() {
+                                    document.getElementById('divErp').style.display = document.getElementById('chkLicErp').checked ? 'block' : 'none';
+                                }
+                            </script>
+                            <div class="mt-4 text-end">
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="bi bi-save"></i> Guardar Inventario
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 4. TABLA DE HISTORIAL -->
+                <div class="card shadow-sm border-0 mt-5">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3 text-secondary">
+                            <i class="bi bi-list-columns-reverse"></i> Historial de Equipos Registrados
+                        </h5>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Hardware</th>
+                                        <th>Estatus</th>
+                                        <th>Antivirus (ISO)</th>
+                                        <th>Office</th>
+                                        <th>Fecha Registro</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for equipo in mis_equipos %}
+                                    <tr>
+                                        <td><span class="badge bg-primary">{{ equipo.tipo_equipo }}</span></td>
+                                        <td>{{ equipo.estatus }}</td>
+                                        <td>
+                                            {% if equipo.tiene_antivirus %}
+                                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Activo</span>
+                                            {% else %}
+                                                <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Sin protección</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if equipo.prog_office %}
+                                                Sí ({{ equipo.version_office }})
+                                            {% else %}
+                                                No
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-muted">{{ equipo.fecha_auditoria|date:"d M Y" }}</td>
+                                        <td>
+    <a href="{% url 'editar_equipo' equipo.id %}" class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil-square"></i>
+    </a>
+    <a href="{% url 'eliminar_equipo' equipo.id %}" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este equipo?');">
+        <i class="bi bi-trash"></i>
+    </a>
+</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                            Aún no has registrado ningún hardware. Usa el formulario superior para comenzar tu inventario.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

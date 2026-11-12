@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluación ISO 27001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #212529; }
+        .nav-link { color: #adb5bd; margin-bottom: 5px; border-radius: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #343a40; }
+        .audit-card { border-left: 4px solid #0dcaf0; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- PANEL LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="mb-4 text-center mt-2 fw-bold text-info"><i class="bi bi-shield-check"></i> Auditoría IT</h4>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a href="/" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a href="/inventario/" class="nav-link"><i class="bi bi-pc-display me-2"></i> Datos de inventario</a></li>
+                    <li class="nav-item"><a href="/evaluacion/" class="nav-link active"><i class="bi bi-clipboard-data me-2"></i> Evaluación</a></li>
+                    <li class="nav-item mt-4"><a href="#" class="nav-link"><i class="bi bi-gear me-2"></i> Configuración</a></li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-secondary">Auditoría de Sistemas (Cuestionario ISO 27001)</span>
+                </nav>
+
+                <p class="text-muted mb-4">Complete el siguiente cuestionario respondiendo con sinceridad sobre el estado actual de la empresa. Deje apagado el interruptor si la empresa no cumple con la directriz.</p>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Dominio 1: Políticas -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-file-earmark-text"></i> Políticas y Organización</h5>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="pol_documentada" id="p1">
+                                        <label class="form-check-label ms-2" for="p1">¿Existe una política de seguridad documentada y comunicada?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="pol_activos" id="p2">
+                                        <label class="form-check-label ms-2" for="p2">¿Existe un inventario actualizado de todos los activos de TI?</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dominio 2: Control de Accesos -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-person-badge"></i> Control de Accesos</h5>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="acc_passwords" id="a1">
+                                        <label class="form-check-label ms-2" for="a1">¿Se exige una política de contraseñas seguras (longitud/complejidad)?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="acc_mfa" id="a2">
+                                        <label class="form-check-label ms-2" for="a2">¿Se exige Autenticación Multifactor (MFA) para sistemas críticos?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="acc_bajas" id="a3">
+                                        <label class="form-check-label ms-2" for="a3">¿Existe un proceso formal e inmediato para revocar accesos a ex-empleados?</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dominio 3: Seguridad Física -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-building-lock"></i> Seguridad Física</h5>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="fis_site" id="f1">
+                                        <label class="form-check-label ms-2" for="f1">¿Los servidores y redes están en áreas con acceso físico restringido?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="fis_energia" id="f2">
+                                        <label class="form-check-label ms-2" for="f2">¿Se cuenta con UPS y protección contra apagones para sistemas clave?</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dominio 4: Operaciones y Respaldos -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-hdd-network"></i> Operaciones y Continuidad</h5>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="ope_respaldos" id="o1">
+                                        <label class="form-check-label ms-2" for="o1">¿Se realizan respaldos (backups) regulares de la información crítica?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="ope_pruebas" id="o2">
+                                        <label class="form-check-label ms-2" for="o2">¿Se prueban los respaldos mensualmente para asegurar su restauración?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="ope_antivirus" id="o3">
+                                        <label class="form-check-label ms-2" for="o3">¿Todos los equipos tienen antivirus gestionado y actualizado?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="ope_parches" id="o4">
+                                        <label class="form-check-label ms-2" for="o4">¿Se instalan periódicamente parches de seguridad de Windows/Software?</label>
+                                    </div>
+                                    <div class="form-check form-switch fs-5 mb-3">
+                                        <input class="form-check-input" type="checkbox" name="con_plan" id="o5">
+                                        <label class="form-check-label ms-2" for="o5">¿Tienen un plan de recuperación documentado en caso de desastre (Ransomware/Incendio)?</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+<!-- Dominio 5: Servidores -->
+                        <div class="col-md-12 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-server"></i> Infraestructura de Servidores</h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_dominio" id="s1"><label class="form-check-label ms-2" for="s1">Servidor de Dominio</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_respaldo" id="s2"><label class="form-check-label ms-2" for="s2">Servidor de Respaldo</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_correo" id="s3"><label class="form-check-label ms-2" for="s3">Servidor de Correo</label></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_telefonia" id="s4"><label class="form-check-label ms-2" for="s4">Telefonía (PBX)</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_dns" id="s5"><label class="form-check-label ms-2" for="s5">Servidor DNS</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_antivirus" id="s6"><label class="form-check-label ms-2" for="s6">Servidor Antivirus</label></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_admin" id="s7"><label class="form-check-label ms-2" for="s7">Servidor Administrativo</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_camaras" id="s8"><label class="form-check-label ms-2" for="s8">Cámaras (NVR/DVR)</label></div>
+                                            <div class="form-check form-switch fs-5 mb-2">
+                                                <input class="form-check-input" type="checkbox" name="srv_otros" id="s9" onchange="toggleOtrosServidores()">
+                                                <label class="form-check-label ms-2" for="s9">Otros Servidores</label>
+                                            </div>
+                                            <div id="divOtrosServidores" style="display: none;" class="mt-2 p-2 bg-light border rounded">
+                                                <input type="text" class="form-control" name="srv_otros_desc" placeholder="Especifique cuáles...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dominio 6 y 7: Web y Perimetral -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-globe"></i> Servicios Web</h5>
+                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_pagina" id="w1"><label class="form-check-label ms-2" for="w1">Página Web</label></div>
+                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_dominio" id="w2"><label class="form-check-label ms-2" for="w2">Dominio de Internet</label></div>
+                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_hosting" id="w3"><label class="form-check-label ms-2" for="w3">Hosting Propio/Terceros</label></div>
+                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_servicios" id="w4"><label class="form-check-label ms-2" for="w4">Servicios Web / APIs</label></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm border-0 audit-card h-100">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-shield-lock"></i> Perimetral y Eléctrica</h5>
+                                    <h6 class="text-secondary fw-bold">Seguridad Perimetral</h6>
+                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="seg_biometrico" id="sp1"><label class="form-check-label ms-2" for="sp1">Control Biométrico</label></div>
+                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="seg_camaras" id="sp2"><label class="form-check-label ms-2" for="sp2">Cámaras de Seguridad</label></div>
+                                    <div class="form-check form-switch fs-5 mb-4"><input class="form-check-input" type="checkbox" name="seg_acceso" id="sp3"><label class="form-check-label ms-2" for="sp3">Control de Acceso (Torniquetes)</label></div>
+                                    
+                                    <h6 class="text-secondary fw-bold">Respaldo Eléctrico</h6>
+                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="elec_ups" id="e1"><label class="form-check-label ms-2" for="e1">UPS (Respaldo ininterrumpido)</label></div>
+                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="elec_estabilizador" id="e2"><label class="form-check-label ms-2" for="e2">Estabilizador de corriente</label></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Script para mostrar caja de texto de Otros Servidores -->
+                        <script>
+                            function toggleOtrosServidores() {
+                                document.getElementById('divOtrosServidores').style.display = document.getElementById('s9').checked ? 'block' : 'none';
+                            }
+                        </script>
+                    <div class="text-end mb-5">
+                        <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm">
+                            <i class="bi bi-cloud-arrow-up"></i> Guardar Evaluación y Analizar
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>
