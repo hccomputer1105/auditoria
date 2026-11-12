@@ -118,3 +118,88 @@ class EvaluacionISO(models.Model):
 
     def __str__(self):
         return f"Auditoría Multinorma - {self.usuario_empresa.username}"
+    # 4. TABLA DE EVALUACIÓN DE MARKETING Y VENTAS (SMARKETING)
+class EvaluacionMarketing(models.Model):
+    ESCALA_CHOICES = [
+        (1, '1 - Inexistente / No implementado'),
+        (3, '3 - En desarrollo / Parcial'),
+        (5, '5 - Consolidado / Documentado'),
+    ]
+
+    usuario_empresa = models.ForeignKey(User, on_delete=models.CASCADE)
+    fecha_evaluacion = models.DateTimeField(auto_now_add=True)
+
+    # --- CUESTIONARIO 1: ESTRUCTURACIÓN ORGANIZACIONAL ---
+    # 1. Delimitación de Funciones y Gobernanza
+    m1_1 = models.IntegerField("1.1 Responsabilidades documentadas", choices=ESCALA_CHOICES, default=1)
+    ev_m1_1 = models.CharField("Evidencia 1.1", max_length=255, blank=True, null=True)
+    m1_2 = models.IntegerField("1.2 Liderazgo estratégico (CMO)", choices=ESCALA_CHOICES, default=1)
+    ev_m1_2 = models.CharField("Evidencia 1.2", max_length=255, blank=True, null=True)
+    m1_3 = models.IntegerField("1.3 Participación en feedback de producto", choices=ESCALA_CHOICES, default=1)
+    ev_m1_3 = models.CharField("Evidencia 1.3", max_length=255, blank=True, null=True)
+
+    # 2. Talento y Estructura Organizativa
+    m1_4 = models.IntegerField("2.1 Roles internos y agencias", choices=ESCALA_CHOICES, default=1)
+    ev_m1_4 = models.CharField("Evidencia 2.1", max_length=255, blank=True, null=True)
+    m1_5 = models.IntegerField("2.2 Plan de contratación clave", choices=ESCALA_CHOICES, default=1)
+    ev_m1_5 = models.CharField("Evidencia 2.2", max_length=255, blank=True, null=True)
+    m1_6 = models.IntegerField("2.3 Especialistas en contenidos y activos", choices=ESCALA_CHOICES, default=1)
+    ev_m1_6 = models.CharField("Evidencia 2.3", max_length=255, blank=True, null=True)
+
+    # 3. Presupuesto y Asignación de Recursos
+    m1_7 = models.IntegerField("3.1 Determinación formal del presupuesto", choices=ESCALA_CHOICES, default=1)
+    ev_m1_7 = models.CharField("Evidencia 3.1", max_length=255, blank=True, null=True)
+    m1_8 = models.IntegerField("3.2 Presupuesto para experimentación", choices=ESCALA_CHOICES, default=1)
+    ev_m1_8 = models.CharField("Evidencia 3.2", max_length=255, blank=True, null=True)
+
+    # 4. Pila Tecnológica (Tech Stack) y Procesos
+    m1_9 = models.IntegerField("4.1 Herramientas integradas de gestión", choices=ESCALA_CHOICES, default=1)
+    ev_m1_9 = models.CharField("Evidencia 4.1", max_length=255, blank=True, null=True)
+    m1_10 = models.IntegerField("4.2 Automatización entre plataformas", choices=ESCALA_CHOICES, default=1)
+    ev_m1_10 = models.CharField("Evidencia 4.2", max_length=255, blank=True, null=True)
+    m1_11 = models.IntegerField("4.3 Calendario editorial anticipado", choices=ESCALA_CHOICES, default=1)
+    ev_m1_11 = models.CharField("Evidencia 4.3", max_length=255, blank=True, null=True)
+
+    # --- CUESTIONARIO 2: ESTRATEGIA Y SMARKETING ---
+    # 1. Propuesta de Valor, Audiencia y Competencia
+    m2_1 = models.IntegerField("1.1 Perfil de Cliente Ideal (ICP)", choices=ESCALA_CHOICES, default=1)
+    ev_m2_1 = models.CharField("Evidencia Smarketing 1.1", max_length=255, blank=True, null=True)
+    m2_2 = models.IntegerField("1.2 Beneficios diferenciales (USP)", choices=ESCALA_CHOICES, default=1)
+    ev_m2_2 = models.CharField("Evidencia Smarketing 1.2", max_length=255, blank=True, null=True)
+    m2_3 = models.IntegerField("1.3 Auditoría periódica de competencia", choices=ESCALA_CHOICES, default=1)
+    ev_m2_3 = models.CharField("Evidencia Smarketing 1.3", max_length=255, blank=True, null=True)
+
+    # 2. Ecosistema de Adquisición y Conversión
+    m2_4 = models.IntegerField("2.1 Diversificación de canales de clientes", choices=ESCALA_CHOICES, default=1)
+    ev_m2_4 = models.CharField("Evidencia Smarketing 2.1", max_length=255, blank=True, null=True)
+    m2_5 = models.IntegerField("2.2 Conversión web, prueba social y CTAs", choices=ESCALA_CHOICES, default=1)
+    ev_m2_5 = models.CharField("Evidencia Smarketing 2.2", max_length=255, blank=True, null=True)
+    m2_6 = models.IntegerField("2.3 Estrategia SEO y pauta optimizada por CAC", choices=ESCALA_CHOICES, default=1)
+    ev_m2_6 = models.CharField("Evidencia Smarketing 2.3", max_length=255, blank=True, null=True)
+
+    # 3. Alineación Marketing-Ventas (Smarketing y SLA)
+    m2_7 = models.IntegerField("3.1 Criterios claros MQL vs SQL", choices=ESCALA_CHOICES, default=1)
+    ev_m2_7 = models.CharField("Evidencia Smarketing 3.1", max_length=255, blank=True, null=True)
+    m2_8 = models.IntegerField("3.2 SLA de tiempo de contacto de ventas", choices=ESCALA_CHOICES, default=1)
+    ev_m2_8 = models.CharField("Evidencia Smarketing 3.2", max_length=255, blank=True, null=True)
+    m2_9 = models.IntegerField("3.3 Retroalimentación de ventas sobre pérdidas", choices=ESCALA_CHOICES, default=1)
+    ev_m2_9 = models.CharField("Evidencia Smarketing 3.3", max_length=255, blank=True, null=True)
+
+    # 4. Medición, CRM y Madurez de Datos
+    m2_10 = models.IntegerField("4.1 CRM centralizado de ciclo completo", choices=ESCALA_CHOICES, default=1)
+    ev_m2_10 = models.CharField("Evidencia Smarketing 4.1", max_length=255, blank=True, null=True)
+    m2_11 = models.IntegerField("4.2 Medición de ROAS, CAC y LTV", choices=ESCALA_CHOICES, default=1)
+    ev_m2_11 = models.CharField("Evidencia Smarketing 4.2", max_length=255, blank=True, null=True)
+    m2_12 = models.IntegerField("4.3 Flujos automatizados de nutrición (Email)", choices=ESCALA_CHOICES, default=1)
+    ev_m2_12 = models.CharField("Evidencia Smarketing 4.3", max_length=255, blank=True, null=True)
+
+    # 5. Retención, Fidelización y Postventa
+    m2_13 = models.IntegerField("5.1 Ingresos por recompras y recurrencia", choices=ESCALA_CHOICES, default=1)
+    ev_m2_13 = models.CharField("Evidencia Smarketing 5.1", max_length=255, blank=True, null=True)
+    m2_14 = models.IntegerField("5.2 Medición de NPS y Churn Rate", choices=ESCALA_CHOICES, default=1)
+    ev_m2_14 = models.CharField("Evidencia Smarketing 5.2", max_length=255, blank=True, null=True)
+    m2_15 = models.IntegerField("5.3 Programa estructurado de referidos", choices=ESCALA_CHOICES, default=1)
+    ev_m2_15 = models.CharField("Evidencia Smarketing 5.3", max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Auditoría Marketing - {self.usuario_empresa.username}"

@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Computadora, Perfil, EvaluacionISO
+from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_view(request):
@@ -237,3 +238,195 @@ def evaluacion_view(request):
         return redirect('dashboard')
         
     return render(request, 'equipos/evaluacion.html', {'eval': evaluacion})
+@login_required(login_url='/cuentas/login/')
+def evaluacion_marketing_view(request):
+    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+
+    if request.method == 'POST':
+        if not evaluacion:
+            evaluacion = EvaluacionMarketing(usuario_empresa=request.user)
+            
+        codigos = [
+            'm1_1', 'm1_2', 'm1_3', 'm1_4', 'm1_5', 'm1_6', 'm1_7', 'm1_8', 'm1_9', 'm1_10', 'm1_11',
+            'm2_1', 'm2_2', 'm2_3', 'm2_4', 'm2_5', 'm2_6', 'm2_7', 'm2_8', 'm2_9', 'm2_10', 'm2_11', 'm2_12', 'm2_13', 'm2_14', 'm2_15'
+        ]
+        
+        for cod in codigos:
+            setattr(evaluacion, cod, int(request.POST.get(cod, 1)))
+            setattr(evaluacion, f"ev_{cod}", request.POST.get(f"ev_{cod}", ""))
+            
+        evaluacion.save()
+        return redirect('dashboard_marketing')
+        # Por ahora recarga la misma página con mensaje de éxito; en el siguiente paso redirigirá al Dashboard de Marketing
+        return render(request, 'equipos/evaluacion_marketing.html', {'eval': evaluacion, 'guardado': True})
+        
+    return render(request, 'equipos/evaluacion_marketing.html', {'eval': evaluacion})
+
+@login_required(login_url='/cuentas/login/')
+def dashboard_marketing_view(request):
+    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    
+    puntaje_c1 = 0
+    max_c1 = 55  # 11 ítems x 5 pts
+    puntaje_c2 = 0
+    max_c2 = 75  # 15 ítems x 5 pts
+    puntaje_total = 0
+    max_total = 130
+    
+    score_madurez = 0
+    score_brecha = 100
+    
+    fortalezas = []
+    debilidades = []
+    oportunidades = []
+    amenazas = []
+    
+    plan_smart_30 = []
+    plan_smart_60 = []
+    plan_smart_90 = []
+    
+    race_fases = {
+        'Reach (Alcance y Atracción)': [],
+        'Act (Interacción y Captación)': [],
+        'Convert (Conversión y Smarketing)': [],
+        'Engage (Fidelización y Postventa)': [],
+    }
+
+    if evaluacion:
+        # 1. Cálculos por bloque
+        campos_c1 = [f'm1_{i}' for i in range(1, 12)]
+        campos_c2 = [f'm2_{i}' for i in range(1, 16)]
+        
+        puntaje_c1 = sum(getattr(evaluacion, c, 1) for c in campos_c1)
+        puntaje_c2 = sum(getattr(evaluacion, c, 1) for c in campos_c2)
+        puntaje_total = puntaje_c1 + puntaje_c2
+        
+        score_madurez = round((puntaje_total / max_total) * 100)
+        score_brecha = 100 - score_madurez
+
+        # 2. Mapeo de Criterios para FODA
+        criterios_mkt = {
+            'm1_1': ("Responsabilidades y metas estratégicas de marketing formalmente documentadas.", "Marketing opera sin metas claras absorbiendo tareas operativas residuales."),
+            'm1_2': ("Liderazgo estratégico definido con perfil ejecutivo (CMO/Director) en toma de decisiones.", "Falta de liderazgo especializado en marketing; decisiones reactivas."),
+            'm1_3': ("Integración activa del feedback del mercado en el desarrollo de productos/servicios.", "Desconexión entre las necesidades reales del cliente y la oferta comercial."),
+            'm1_4': ("Estructura equilibrada entre talento interno y agencias especializadas.", "Sobrecarga operativa por falta de especialistas en áreas clave."),
+            'm1_5': ("Hoja de ruta clara de contrataciones clave para escalar el departamento.", "Crecimiento desordenado del equipo comercial y de contenidos."),
+            'm1_6': ("Procesos y especialistas dedicados a la creación continua de contenidos y activos.", "Activos digitales desactualizados por falta de capacidad de producción."),
+            'm1_7': ("Presupuesto anual asignado formalmente sobre porcentaje de ingresos proyectados.", "Asignación presupuestaria improvisada que impide planificar a mediano plazo."),
+            'm1_8': ("Fondo destinado a experimentación y testeo de nuevos canales de adquisición.", "Rigidez estratégica; dependencia de canales tradicionales sin innovación."),
+            'm1_9': ("Uso de herramientas colaborativas con flujos de trabajo visibles para el equipo.", "Dispersión operativa en chats y correos sin trazabilidad de proyectos."),
+            'm1_10': ("Ecosistema tecnológico integrado (web, formularios, email) sin silos de datos.", "Transferencia manual de prospectos con alto riesgo de pérdida de información."),
+            'm1_11': ("Calendario editorial y de campañas planificado con 2 a 4 semanas de anticipación.", "Operación reactiva respondiendo a urgencias de última hora."),
+            'm2_1': ("Perfil de Cliente Ideal (ICP / Buyer Persona) consensuado entre marketing y ventas.", "Falta de alineación sobre el segmento objetivo; dispersión de esfuerzos."),
+            'm2_2': ("Propuesta Única de Valor (USP) enfocada en beneficios diferenciales claros.", "Comunicación centrada en características técnicas y no en soluciones al cliente."),
+            'm2_3': ("Auditoría periódica (benchmark) de precios, tráfico y oferta de competidores.", "Ceguera competitiva ante movimientos de precios y posicionamiento del mercado."),
+            'm2_4': ("Diversificación saludable en 2 o 3 canales principales de adquisición de clientes.", "Alta dependencia de un único canal de captación (riesgo de caída abrupta)."),
+            'm2_5': ("Sitio web optimizado para conversión con prueba social y CTAs efectivos.", "Tráfico web desaprovechado por falta de llamados a la acción y validación social."),
+            'm2_6': ("Equilibrio documentado entre captación orgánica (SEO) y pauta optimizada por CAC.", "Adquisición costosa dependiente exclusivamente de pauta publicitaria."),
+            'm2_7': ("Criterios objetivos (Lead Scoring) que diferencian MQL de SQL.", "Entrega de prospectos no calificados que saturan y desgastan al equipo de ventas."),
+            'm2_8': ("Acuerdo de Nivel de Servicio (SLA) vigente sobre tiempos de respuesta comercial.", "Demoras en el contacto inicial de leads que enfrían la intención de compra."),
+            'm2_9': ("Retroalimentación estructurada de ventas sobre motivos de pérdida de negocios.", "Campañas de marketing sin optimización basada en objeciones reales de cierre."),
+            'm2_10': ("CRM centralizado que registra todo el ciclo de vida del cliente hasta el cierre.", "Información comercial fragmentada en hojas de cálculo individuales."),
+            'm2_11': ("Medición precisa de rentabilidad mediante métricas ROAS, CAC y LTV.", "Toma de decisiones basada en métricas de vanidad (likes/clics) sin retorno real."),
+            'm2_12': ("Flujos automatizados de nutrición (Lead Nurturing) para prospectos fríos.", "Pérdida de oportunidades comerciales que no compran en el primer contacto."),
+            'm2_13': ("Estrategia activa para potenciar recompras, renovaciones e ingresos recurrentes.", "Modelo dependiente únicamente de captar clientes nuevos constantemente."),
+            'm2_14': ("Monitoreo sistemático de lealtad y satisfacción mediante NPS y Churn Rate.", "Desconocimiento de las causas de abandono o cancelación de clientes."),
+            'm2_15': ("Programa estructurado de referidos con incentivos para clientes promotores.", "Desaprovechamiento del canal de recomendación boca a boca."),
+        }
+
+        for campo, (txt_f, txt_d) in criterios_mkt.items():
+            val = getattr(evaluacion, campo, 1)
+            if val == 5:
+                fortalezas.append(txt_f)
+            elif val == 3:
+                oportunidades.append(f"Sistematizar y documentar: {txt_f}")
+            else:
+                debilidades.append(txt_d)
+
+        # Amenazas críticas
+        if evaluacion.m2_4 == 1:
+            amenazas.append("Riesgo crítico de caída de ingresos por dependencia de un único canal de adquisición.")
+        if evaluacion.m2_10 == 1 or evaluacion.m2_11 == 1:
+            amenazas.append("Pérdida de rentabilidad por inversión publicitaria sin trazabilidad de CAC/LTV en CRM.")
+        if evaluacion.m2_3 == 1:
+            amenazas.append("Pérdida de cuota de mercado frente a competidores con mejor posicionamiento digital.")
+        if evaluacion.m2_14 == 1:
+            amenazas.append("Erosión silenciosa de la cartera actual por falta de monitoreo de fuga de clientes (Churn).")
+
+        # 3. Generación de Objetivos SMART (30 / 60 / 90 Días) según fugas (1 o 3 pts)
+        if evaluacion.m2_1 < 5 or evaluacion.m2_2 < 5:
+            plan_smart_30.append("Definir y documentar el ICP y la Propuesta Única de Valor (USP) en un taller conjunto Marketing-Ventas, logrando un 100% de adopción en el pitch comercial en los próximos 30 días.")
+        if evaluacion.m2_7 < 5 or evaluacion.m2_8 < 5:
+            plan_smart_30.append("Establecer un Acuerdo de Nivel de Servicio (SLA) y reglas de calificación MQL/SQL para reducir el tiempo de primer contacto de ventas a menos de 15 minutos en 30 días.")
+        if evaluacion.m2_10 < 5:
+            plan_smart_30.append("Centralizar el 100% de los prospectos activos en un CRM único con etapas de embudo definidas durante los primeros 30 días.")
+        if not plan_smart_30:
+            plan_smart_30.append("Auditar la tasa de conversión actual entre MQL y SQL en el CRM para identificar al menos un 10% de mejora en velocidad de cierre en 30 días.")
+
+        if evaluacion.m2_5 < 5 or evaluacion.m1_11 < 5:
+            plan_smart_60.append("Rediseñar las páginas de aterrizaje clave incorporando prueba social y CTAs directos, junto con un calendario editorial anticipado de 4 semanas, para elevar la conversión web en un 15% al día 60.")
+        if evaluacion.m2_11 < 5:
+            plan_smart_60.append("Implementar un tablero mensual de rentabilidad comercial que calcule CAC, ROAS y LTV por canal de adquisición antes de finalizar el día 60.")
+        if evaluacion.m1_9 < 5 or evaluacion.m1_10 < 5:
+            plan_smart_60.append("Automatizar la captura de formularios web hacia el CRM y el gestor de proyectos para eliminar el 100% de cargas manuales de leads en 60 días.")
+        if not plan_smart_60:
+            plan_smart_60.append("Ejecutar al menos 2 pruebas A/B en anuncios y páginas de destino para reducir el Coste de Adquisición de Clientes (CAC) en un 12% al día 60.")
+
+        if evaluacion.m2_12 < 5:
+            plan_smart_90.append("Construir e implementar 3 flujos automatizados de Lead Nurturing por email para recuperar al menos un 10% de prospectos fríos en un horizonte de 90 días.")
+        if evaluacion.m2_13 < 5 or evaluacion.m2_14 < 5 or evaluacion.m2_15 < 5:
+            plan_smart_90.append("Lanzar una encuesta trimestral de NPS y un programa formal de referidos para incrementar los ingresos por recurrencia y recomendación en un 15% al día 90.")
+        if evaluacion.m1_4 < 5 or evaluacion.m1_5 < 5:
+            plan_smart_90.append("Completar la contratación o asignación de roles especialistas (contenidos/tráfico) según la hoja de ruta organizacional antes de cumplir 90 días.")
+        if not plan_smart_90:
+            plan_smart_90.append("Escalar el presupuesto en un 20% hacia los 2 canales con mayor LTV/CAC comprobado durante el trimestre (90 días).")
+
+        # 4. Diagnóstico Táctico Framework RACE
+        # REACH (Atracción: m2_3, m2_4, m2_6)
+        if evaluacion.m2_4 < 5 or evaluacion.m2_6 < 5:
+            race_fases['Reach (Alcance y Atracción)'].append("Diversificar fuentes de tráfico combinando posicionamiento orgánico (SEO) con pauta segmentada por CAC.")
+        else:
+            race_fases['Reach (Alcance y Atracción)'].append("Canales de adquisición diversificados y estrategia SEO/Paid consolidada.")
+
+        # ACT (Interacción: m1_11, m2_2, m2_5)
+        if evaluacion.m2_5 < 5 or evaluacion.m1_11 < 5:
+            race_fases['Act (Interacción y Captación)'].append("Optimizar arquitectura persuasiva del sitio web (CTAs y prueba social) y sostener calendario de contenidos.")
+        else:
+            race_fases['Act (Interacción y Captación)'].append("Ecosistema web con propuesta de valor clara y producción sistemática de contenidos.")
+
+        # CONVERT (Conversión: m2_7, m2_8, m2_10, m2_11)
+        if evaluacion.m2_7 < 5 or evaluacion.m2_8 < 5 or evaluacion.m2_10 < 5:
+            race_fases['Convert (Conversión y Smarketing)'].append("Unificar CRM, aplicar reglas MQL/SQL y exigir cumplimiento de SLA comercial en tiempos de respuesta.")
+        else:
+            race_fases['Convert (Conversión y Smarketing)'].append("Sinergia Smarketing operativa con trazabilidad completa en CRM y medición de ROAS/CAC.")
+
+        # ENGAGE (Fidelización: m2_12, m2_13, m2_14, m2_15)
+        if evaluacion.m2_13 < 5 or evaluacion.m2_14 < 5 or evaluacion.m2_15 < 5:
+            race_fases['Engage (Fidelización y Postventa)'].append("Activar secuencias de nutrición, medición periódica de NPS/Churn y programa formal de referidos.")
+        else:
+            race_fases['Engage (Fidelización y Postventa)'].append("Estrategia de retención activa con monitoreo de lealtad (NPS) y recurrencia.")
+
+    else:
+        debilidades.append("Aún no se ha completado la Evaluación de Marketing y Ventas.")
+        oportunidades.append("Dirígete a 'Evaluación Marketing' para diagnosticar el área comercial.")
+
+    context = {
+        'tiene_evaluacion': evaluacion is not None,
+        'puntaje_c1': puntaje_c1,
+        'max_c1': max_c1,
+        'puntaje_c2': puntaje_c2,
+        'max_c2': max_c2,
+        'puntaje_total': puntaje_total,
+        'max_total': max_total,
+        'score_madurez': score_madurez,
+        'score_brecha': score_brecha,
+        'fortalezas': fortalezas,
+        'debilidades': debilidades,
+        'oportunidades': oportunidades,
+        'amenazas': amenazas,
+        'plan_smart_30': plan_smart_30,
+        'plan_smart_60': plan_smart_60,
+        'plan_smart_90': plan_smart_90,
+        'race_fases': race_fases,
+    }
+    return render(request, 'equipos/dashboard_marketing.html', context)
