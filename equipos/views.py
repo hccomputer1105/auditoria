@@ -5,15 +5,119 @@ from .models import Computadora, Perfil, EvaluacionISO
 @login_required(login_url='/cuentas/login/')
 def dashboard_view(request):
     equipos = Computadora.objects.filter(usuario_empresa=request.user)
-    
     total_equipos = equipos.count()
-    con_antivirus = equipos.filter(tiene_antivirus=True).count()
     
+    equipos_buenos = equipos.filter(estatus='Bueno').count()
+    equipos_reparacion = equipos.filter(estatus='En reparación').count()
+    equipos_malos = equipos.filter(estatus='Malo').count()
+    
+    ultima_evaluacion = EvaluacionISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    
+    score_seguro = 0
+    score_inseguro = 100
+    puntaje_obtenido = 0
+    puntaje_maximo = 42  # 21 reactivos x 2 puntos cada uno
+    
+    fortalezas = []
+    debilidades = []
+    oportunidades = []
+    amenazas = []
+    
+    # --- 1. ANÁLISIS DEL INVENTARIO ---
+    if total_equipos > 0:
+        sin_antivirus = equipos.filter(tiene_antivirus=False).count()
+        sin_lic_win = equipos.filter(licencia_windows=False).count()
+        sin_lic_office = equipos.filter(prog_office=True, licencia_office=False).count()
+
+        if sin_antivirus == 0:
+            fortalezas.append("100% del parque informático cuenta con protección antivirus activa.")
+        else:
+            debilidades.append(f"{sin_antivirus} equipo(s) carecen de protección antivirus local.")
+            amenazas.append("Alta vulnerabilidad ante infecciones por malware o propagación en red local.")
+
+        if equipos_malos > 0 or equipos_reparacion > 0:
+            debilidades.append(f"Existen {equipos_malos} equipo(s) dañados y {equipos_reparacion} en reparación.")
+            oportunidades.append("Planificar renovación tecnológica para optimizar tiempos de respuesta operativa.")
+        else:
+            fortalezas.append("El 100% del hardware inventariado se encuentra en estado operativo óptimo.")
+
+        if sin_lic_win > 0 or sin_lic_office > 0:
+            debilidades.append("Brechas en el licenciamiento de software base (Windows / Microsoft Office).")
+            amenazas.append("Riesgo legal por auditorías de software y falta de parches oficiales de seguridad.")
+    else:
+        debilidades.append("No se han registrado activos de hardware en el inventario.")
+        oportunidades.append("Iniciar el levantamiento de inventario para tener trazabilidad de los activos TI.")
+
+    # --- 2. ANÁLISIS DE LA EVALUACIÓN MULTINORMA ---
+    if ultima_evaluacion:
+        criterios = {
+            'p1_1': ("Alineación estratégica entre el plan de TI y los objetivos del negocio (ISO 38500).", "Compras de TI aisladas sin justificación de costo/beneficio ni aval directivo."),
+            'p1_2': ("Roles y responsabilidades del área informática claramente delimitados (Matriz RACI).", "Concentración de funciones sin delimitación o desconocimiento de roles."),
+            'p1_3': ("Monitoreo directivo activo sobre el rendimiento y cumplimiento normativo de TI.", "Falta de seguimiento ejecutivo sobre las operaciones tecnológicas."),
+            'p2_1': ("Metodología formal de gestión de riesgos aprobada por la gerencia (ISO 27001).", "Inexistencia de matriz de riesgos y análisis periódico de amenazas."),
+            'p2_2': ("Declaración de Aplicabilidad (SoA) formal y actualizada.", "Desconocimiento de los controles aplicables o exclusiones sin justificar."),
+            'p2_3': ("Control de acceso lógico basado en menor privilegio y autenticación MFA.", "Cuentas compartidas o privilegios excesivos sin control ni revocación."),
+            'p2_4': ("Programas periódicos de concienciación en seguridad para el personal.", "Brechas humanas por falta de capacitación ante ingeniería social/phishing."),
+            'p3_1': ("Perímetro blindado con monitoreo automatizado de eventos y logs (ISO 27032).", "Falta de análisis de logs de seguridad y filtros contra intrusiones."),
+            'p3_2': ("Gestión programada de vulnerabilidades y aplicación de parches.", "Sistemas operativos o aplicaciones obsoletas expuestas a fallos conocidos."),
+            'p3_3': ("Procedimiento documentado para detección y contención de incidentes.", "Falta de trazabilidad y ausencia de análisis ante incidentes cibernéticos."),
+            'p4_1': ("Catálogo de Servicios y Acuerdos de Nivel de Servicio (SLA) definidos (ISO 20000-1).", "Solicitudes gestionadas sin compromisos de tiempo ni formalización."),
+            'p4_2': ("Mesa de ayuda estructurada con clasificación por urgencia e impacto.", "Peticiones de soporte recibidas por canales informales sin seguimiento."),
+            'p4_3': ("Gestión de Problemas enfocada en eliminar causas raíz recurrentes.", "Tratamiento meramente reactivo; los incidentes críticos se repiten."),
+            'p4_4': ("Control formal de cambios (RFC/CAB) con planes de reversión.", "Modificaciones directas en producción sin pruebas ni autorización previa."),
+            'p5_1': ("Análisis de Impacto en el Negocio (BIA) con tiempos RTO/RPO definidos (ISO 22301).", "Desconocimiento del impacto operativo/financiero ante caída de sistemas."),
+            'p5_2': ("Respaldos periódicos con pruebas técnicas comprobadas de restauración.", "Backups ejecutados sin verificar si los datos son realmente recuperables."),
+            'p5_3': ("Planes de Continuidad (BCP) y Recuperación ante Desastres (DRP) vigentes.", "Ausencia de protocolos para operar ante caída de servidores o ransomware."),
+            'p5_4': ("Validación periódica de continuidad mediante simulacros realistas.", "Planes de contingencia teóricos nunca ejecutados ni puestos a prueba."),
+            'p6_1': ("Ciclo de vida de desarrollo estructurado con pruebas y control de versiones.", "Pases directos de software a producción sin validación de calidad."),
+            'p6_2': ("Proveedores externos y servicios nube monitoreados bajo cláusulas SLA/NDA.", "Dependencia de terceros sin acuerdos de confidencialidad ni control."),
+            'p6_3': ("Ciclo de mejora continua activo mediante auditorías internas y cierre de hallazgos.", "Ausencia de auditorías internas o hallazgos desatendidos en el tiempo."),
+        }
+
+        for campo, (texto_fortaleza, texto_debilidad) in criterios.items():
+            valor = getattr(ultima_evaluacion, campo, 0)
+            puntaje_obtenido += valor
+            if valor == 2:
+                fortalezas.append(texto_fortaleza)
+            elif valor == 1:
+                oportunidades.append(f"Formalizar y documentar: {texto_fortaleza}")
+            else:
+                debilidades.append(texto_debilidad)
+
+        # Amenazas críticas derivadas
+        if ultima_evaluacion.p5_2 == 0 or ultima_evaluacion.p5_3 == 0:
+            amenazas.append("Riesgo crítico de pérdida irreversible de datos y paralización operativa ante Ransomware o desastres.")
+        if ultima_evaluacion.p2_3 == 0 or ultima_evaluacion.p3_1 == 0:
+            amenazas.append("Alta exposición a ciberataques externos, robo de credenciales y accesos no autorizados.")
+        if not ultima_evaluacion.elec_ups:
+            debilidades.append("Infraestructura sin respaldo eléctrico ininterrumpido (UPS).")
+            amenazas.append("Daño físico en servidores y corrupción de bases de datos por fallos eléctricos.")
+
+        score_seguro = round((puntaje_obtenido / puntaje_maximo) * 100)
+        score_inseguro = 100 - score_seguro
+    else:
+        debilidades.append("Cuestionario de auditoría multinorma pendiente por ejecutar.")
+        oportunidades.append("Realizar el diagnóstico inicial en la pestaña 'Evaluación' para establecer la línea base.")
+
     context = {
         'total_equipos': total_equipos,
-        'con_antivirus': con_antivirus,
+        'equipos_buenos': equipos_buenos,
+        'equipos_reparacion': equipos_reparacion,
+        'equipos_malos': equipos_malos,
+        'score_seguro': score_seguro,
+        'score_inseguro': score_inseguro,
+        'puntaje_obtenido': puntaje_obtenido,
+        'puntaje_maximo': puntaje_maximo,
+        'tiene_evaluacion': ultima_evaluacion is not None,
+        'fortalezas': fortalezas,
+        'debilidades': debilidades,
+        'oportunidades': oportunidades,
+        'amenazas': amenazas,
     }
     return render(request, 'equipos/dashboard.html', context)
+
+
+
 
 
 @login_required(login_url='/cuentas/login/')
@@ -87,48 +191,49 @@ def editar_equipo(request, id):
 
 @login_required(login_url='/cuentas/login/')
 def evaluacion_view(request):
+    evaluacion = EvaluacionISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+
     if request.method == 'POST':
-        # Guardar las respuestas de los switches (checkboxes) incluyendo las nuevas secciones
-        nueva_evaluacion = EvaluacionISO(
-            usuario_empresa=request.user,
-            pol_documentada=request.POST.get('pol_documentada') == 'on',
-            pol_activos=request.POST.get('pol_activos') == 'on',
-            acc_passwords=request.POST.get('acc_passwords') == 'on',
-            acc_mfa=request.POST.get('acc_mfa') == 'on',
-            acc_bajas=request.POST.get('acc_bajas') == 'on',
-            fis_site=request.POST.get('fis_site') == 'on',
-            fis_energia=request.POST.get('fis_energia') == 'on',
-            ope_respaldos=request.POST.get('ope_respaldos') == 'on',
-            ope_pruebas=request.POST.get('ope_pruebas') == 'on',
-            ope_antivirus=request.POST.get('ope_antivirus') == 'on',
-            ope_parches=request.POST.get('ope_parches') == 'on',
-            con_plan=request.POST.get('con_plan') == 'on',
+        if not evaluacion:
+            evaluacion = EvaluacionISO(usuario_empresa=request.user)
             
-            # --- NUEVOS CAMPOS AGREGADOS ---
-            srv_dominio=request.POST.get('srv_dominio') == 'on',
-            srv_respaldo=request.POST.get('srv_respaldo') == 'on',
-            srv_correo=request.POST.get('srv_correo') == 'on',
-            srv_telefonia=request.POST.get('srv_telefonia') == 'on',
-            srv_dns=request.POST.get('srv_dns') == 'on',
-            srv_antivirus=request.POST.get('srv_antivirus') == 'on',
-            srv_admin=request.POST.get('srv_admin') == 'on',
-            srv_camaras=request.POST.get('srv_camaras') == 'on',
-            srv_otros=request.POST.get('srv_otros') == 'on',
-            srv_otros_desc=request.POST.get('srv_otros_desc', ''),
-            
-            web_pagina=request.POST.get('web_pagina') == 'on',
-            web_dominio=request.POST.get('web_dominio') == 'on',
-            web_hosting=request.POST.get('web_hosting') == 'on',
-            web_servicios=request.POST.get('web_servicios') == 'on',
-            
-            seg_biometrico=request.POST.get('seg_biometrico') == 'on',
-            seg_camaras=request.POST.get('seg_camaras') == 'on',
-            seg_acceso=request.POST.get('seg_acceso') == 'on',
-            
-            elec_ups=request.POST.get('elec_ups') == 'on',
-            elec_estabilizador=request.POST.get('elec_estabilizador') == 'on',
-        )
-        nueva_evaluacion.save()
+        # Guardar los 21 reactivos numéricos (0, 1 o 2)
+        campos_numericos = [
+            'p1_1', 'p1_2', 'p1_3',
+            'p2_1', 'p2_2', 'p2_3', 'p2_4',
+            'p3_1', 'p3_2', 'p3_3',
+            'p4_1', 'p4_2', 'p4_3', 'p4_4',
+            'p5_1', 'p5_2', 'p5_3', 'p5_4',
+            'p6_1', 'p6_2', 'p6_3'
+        ]
+        for campo in campos_numericos:
+            setattr(evaluacion, campo, int(request.POST.get(campo, 0)))
+
+        # Guardar infraestructura complementaria
+        evaluacion.srv_dominio = request.POST.get('srv_dominio') == 'on'
+        evaluacion.srv_respaldo = request.POST.get('srv_respaldo') == 'on'
+        evaluacion.srv_correo = request.POST.get('srv_correo') == 'on'
+        evaluacion.srv_telefonia = request.POST.get('srv_telefonia') == 'on'
+        evaluacion.srv_dns = request.POST.get('srv_dns') == 'on'
+        evaluacion.srv_antivirus = request.POST.get('srv_antivirus') == 'on'
+        evaluacion.srv_admin = request.POST.get('srv_admin') == 'on'
+        evaluacion.srv_camaras = request.POST.get('srv_camaras') == 'on'
+        evaluacion.srv_otros = request.POST.get('srv_otros') == 'on'
+        evaluacion.srv_otros_desc = request.POST.get('srv_otros_desc', '')
+        
+        evaluacion.web_pagina = request.POST.get('web_pagina') == 'on'
+        evaluacion.web_dominio = request.POST.get('web_dominio') == 'on'
+        evaluacion.web_hosting = request.POST.get('web_hosting') == 'on'
+        evaluacion.web_servicios = request.POST.get('web_servicios') == 'on'
+        
+        evaluacion.seg_biometrico = request.POST.get('seg_biometrico') == 'on'
+        evaluacion.seg_camaras = request.POST.get('seg_camaras') == 'on'
+        evaluacion.seg_acceso = request.POST.get('seg_acceso') == 'on'
+        
+        evaluacion.elec_ups = request.POST.get('elec_ups') == 'on'
+        evaluacion.elec_estabilizador = request.POST.get('elec_estabilizador') == 'on'
+        
+        evaluacion.save()
         return redirect('dashboard')
         
-    return render(request, 'equipos/evaluacion.html')
+    return render(request, 'equipos/evaluacion.html', {'eval': evaluacion})

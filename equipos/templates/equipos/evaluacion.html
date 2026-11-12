@@ -2,14 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Evaluación ISO 27001</title>
+    <title>Evaluación Multinorma ISO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .sidebar { min-height: 100vh; background-color: #212529; }
         .nav-link { color: #adb5bd; margin-bottom: 5px; border-radius: 5px; }
         .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #343a40; }
-        .audit-card { border-left: 4px solid #0dcaf0; }
+        .audit-card { border-left: 4px solid #0d6efd; }
+        .evidencia-box { font-size: 0.85rem; background-color: #f8f9fa; border-left: 3px solid #6c757d; }
     </style>
 </head>
 <body class="bg-light">
@@ -31,169 +33,546 @@
             <!-- ÁREA CENTRAL -->
             <div class="col-md-10 p-4">
                 <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
-                    <span class="navbar-brand mb-0 h4 text-secondary">Auditoría de Sistemas (Cuestionario ISO 27001)</span>
+                    <span class="navbar-brand mb-0 h4 text-secondary">Auditoría Integral de TI (Escala Multinorma ISO)</span>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3 fw-bold"><i class="bi bi-person-circle"></i> Hola, {{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Salir</button>
+                        </form>
+                    </div>
                 </nav>
 
-                <p class="text-muted mb-4">Complete el siguiente cuestionario respondiendo con sinceridad sobre el estado actual de la empresa. Deje apagado el interruptor si la empresa no cumple con la directriz.</p>
+                <!-- Guía de Calificación y Botón de Reinicio -->
+                <div class="card border-0 shadow-sm mb-4 bg-white">
+                    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Guía de Calificación Rápida (Máximo: 42 pts / 21 reactivos):</h6>
+                            <span class="badge bg-success me-2">Cumple (2 pts): Documentado y con evidencia</span>
+                            <span class="badge bg-warning text-dark me-2">Parcial (1 pt): Informal o sin registros</span>
+                            <span class="badge bg-danger">No cumple (0 pts): Inexistente</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="reiniciarEvaluacion()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reiniciar todo a 0
+                        </button>
+                    </div>
+                </div>
 
                 <form method="POST">
                     {% csrf_token %}
                     
+                    <!-- DOMINIO 1 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-bank"></i> 1. Gobierno y Dirección Estratégica de TI (ISO/IEC 38500 / ISO 9001)</h5>
+                            
+                            <!-- 1.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">1.1 ¿La alta dirección evalúa y aprueba formalmente las inversiones, adquisiciones y la estrategia tecnológica en función de los objetivos del negocio?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev1_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p1_1" id="p1_1_0" value="0" {% if not eval or eval.p1_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p1_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p1_1" id="p1_1_1" value="1" {% if eval.p1_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p1_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p1_1" id="p1_1_2" value="2" {% if eval.p1_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p1_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev1_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Plan Estratégico de TI, actas de comité directivo, casos de negocio de compras de TI.</div></div>
+                            </div>
+
+                            <!-- 1.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">1.2 ¿Se encuentran claramente delimitados y comunicados los roles, responsabilidades y autoridades dentro del área de informática?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev1_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p1_2" id="p1_2_0" value="0" {% if not eval or eval.p1_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p1_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p1_2" id="p1_2_1" value="1" {% if eval.p1_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p1_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p1_2" id="p1_2_2" value="2" {% if eval.p1_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p1_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev1_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Organigrama, perfiles de puesto, matriz RACI, asignaciones formales de funciones.</div></div>
+                            </div>
+
+                            <!-- 1.3 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">1.3 ¿La dirección supervisa de forma periódica el rendimiento, la eficiencia de recursos y el cumplimiento legal/normativo de TI?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev1_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p1_3" id="p1_3_0" value="0" {% if not eval or eval.p1_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p1_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p1_3" id="p1_3_1" value="1" {% if eval.p1_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p1_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p1_3" id="p1_3_2" value="2" {% if eval.p1_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p1_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev1_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Informes ejecutivos periódicos, métricas de desempeño, auditorías de cumplimiento.</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOMINIO 2 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-shield-lock"></i> 2. Seguridad de la Información y Gestión del Riesgo (ISO/IEC 27001:2022)</h5>
+                            
+                            <!-- 2.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">2.1 ¿Se cuenta con una metodología formal para identificar activos, evaluar riesgos de seguridad y aplicar criterios de tratamiento?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev2_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p2_1" id="p2_1_0" value="0" {% if not eval or eval.p2_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p2_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p2_1" id="p2_1_1" value="1" {% if eval.p2_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p2_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p2_1" id="p2_1_2" value="2" {% if eval.p2_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p2_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev2_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Matriz de riesgos actualizada (al menos anual), actas de aprobación del riesgo residual por la dirección.</div></div>
+                            </div>
+
+                            <!-- 2.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">2.2 ¿Se dispone de una Declaración de Aplicabilidad (SoA) formal donde se justifique la inclusión o exclusión de controles?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev2_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p2_2" id="p2_2_0" value="0" {% if not eval or eval.p2_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p2_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p2_2" id="p2_2_1" value="1" {% if eval.p2_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p2_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p2_2" id="p2_2_2" value="2" {% if eval.p2_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p2_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev2_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Documento de Declaración de Aplicabilidad (SoA) con estatus de implementación.</div></div>
+                            </div>
+
+                            <!-- 2.3 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">2.3 ¿Existen controles formales de acceso lógico y gestión de identidades y privilegios (MFA, contraseñas, bajas)?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev2_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p2_3" id="p2_3_0" value="0" {% if not eval or eval.p2_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p2_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p2_3" id="p2_3_1" value="1" {% if eval.p2_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p2_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p2_3" id="p2_3_2" value="2" {% if eval.p2_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p2_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev2_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Políticas de contraseñas, doble factor (MFA), altas/bajas de cuentas, revisión de accesos privilegiados.</div></div>
+                            </div>
+
+                            <!-- 2.4 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">2.4 ¿Se realizan programas periódicos de formación y concienciación en seguridad para todo el personal?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev2_4"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p2_4" id="p2_4_0" value="0" {% if not eval or eval.p2_4 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p2_4_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p2_4" id="p2_4_1" value="1" {% if eval.p2_4 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p2_4_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p2_4" id="p2_4_2" value="2" {% if eval.p2_4 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p2_4_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev2_4"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Registros de asistencias a capacitaciones, campañas de prevención de phishing/ingeniería social.</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOMINIO 3 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-router"></i> 3. Ciberseguridad y Seguridad en Internet (ISO/IEC 27032:2023)</h5>
+                            
+                            <!-- 3.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">3.1 ¿Existen medidas de protección perimetral, segmentación y análisis de tráfico contra ataques externos (malware, DDoS, intrusiones)?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev3_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p3_1" id="p3_1_0" value="0" {% if not eval or eval.p3_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p3_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p3_1" id="p3_1_1" value="1" {% if eval.p3_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p3_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p3_1" id="p3_1_2" value="2" {% if eval.p3_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p3_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev3_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Reglas de firewall, soluciones EDR/antivirus actualizadas, sistemas SIEM/análisis de logs.</div></div>
+                            </div>
+
+                            <!-- 3.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">3.2 ¿Se mantiene un proceso formal de gestión de vulnerabilidades y aplicación periódica de parches de seguridad?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev3_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p3_2" id="p3_2_0" value="0" {% if not eval or eval.p3_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p3_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p3_2" id="p3_2_1" value="1" {% if eval.p3_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p3_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p3_2" id="p3_2_2" value="2" {% if eval.p3_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p3_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev3_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Escaneos de vulnerabilidades, calendario de parches en servidores y estaciones de trabajo.</div></div>
+                            </div>
+
+                            <!-- 3.3 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">3.3 ¿Existe un procedimiento documentado para la detección, escalamiento y contención de incidentes de ciberseguridad?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev3_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p3_3" id="p3_3_0" value="0" {% if not eval or eval.p3_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p3_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p3_3" id="p3_3_1" value="1" {% if eval.p3_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p3_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p3_3" id="p3_3_2" value="2" {% if eval.p3_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p3_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev3_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Registro de incidentes, manual de respuesta a incidentes de seguridad, bitácoras de incidentes.</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOMINIO 4 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-headset"></i> 4. Gestión y Entrega de Servicios de TI (ISO/IEC 20000-1)</h5>
+                            
+                            <!-- 4.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">4.1 ¿Se cuenta con un Catálogo de Servicios y Acuerdos de Nivel de Servicio (SLA) formalmente definidos con los usuarios?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev4_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p4_1" id="p4_1_0" value="0" {% if not eval or eval.p4_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p4_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p4_1" id="p4_1_1" value="1" {% if eval.p4_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p4_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p4_1" id="p4_1_2" value="2" {% if eval.p4_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p4_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev4_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Catálogo de servicios publicado, SLAs con metas de tiempo de atención y resolución.</div></div>
+                            </div>
+
+                            <!-- 4.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">4.2 ¿Existe un proceso controlado para el registro, atención, escalamiento y cierre de incidentes y requerimientos de soporte?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev4_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p4_2" id="p4_2_0" value="0" {% if not eval or eval.p4_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p4_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p4_2" id="p4_2_1" value="1" {% if eval.p4_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p4_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p4_2" id="p4_2_2" value="2" {% if eval.p4_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p4_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev4_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Mesa de ayuda (Helpdesk/Service Desk), métricas de volumen, tickets y quejas de servicio.</div></div>
+                            </div>
+
+                            <!-- 4.3 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">4.3 ¿Se aplican procedimientos para la Gestión de Problemas orientados a resolver la causa raíz de incidentes recurrentes?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev4_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p4_3" id="p4_3_0" value="0" {% if not eval or eval.p4_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p4_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p4_3" id="p4_3_1" value="1" {% if eval.p4_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p4_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p4_3" id="p4_3_2" value="2" {% if eval.p4_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p4_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev4_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Base de datos de errores conocidos, análisis de causa raíz (RCA), planes de acción.</div></div>
+                            </div>
+
+                            <!-- 4.4 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">4.4 ¿Los cambios en sistemas, configuración e infraestructura se someten a evaluación previa, aprobación y pruebas antes de producción?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev4_4"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p4_4" id="p4_4_0" value="0" {% if not eval or eval.p4_4 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p4_4_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p4_4" id="p4_4_1" value="1" {% if eval.p4_4 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p4_4_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p4_4" id="p4_4_2" value="2" {% if eval.p4_4 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p4_4_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev4_4"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Solicitudes de cambio (RFC), actas de comité de cambios (CAB), planes de reversión (rollback).</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOMINIO 5 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-arrow-repeat"></i> 5. Continuidad del Negocio y Resiliencia de TI (ISO 22301:2019)</h5>
+                            
+                            <!-- 5.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">5.1 ¿Se ha realizado un Análisis de Impacto en el Negocio (BIA) para definir los servicios críticos y tiempos objetivos (RTO, RPO)?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev5_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p5_1" id="p5_1_0" value="0" {% if not eval or eval.p5_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p5_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p5_1" id="p5_1_1" value="1" {% if eval.p5_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p5_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p5_1" id="p5_1_2" value="2" {% if eval.p5_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p5_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev5_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Informe de BIA, matriz de dependencias de TI y tiempos tolerables de indisponibilidad.</div></div>
+                            </div>
+
+                            <!-- 5.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">5.2 ¿Existe una política y rutina periódica de copias de seguridad (backups), con pruebas comprobadas de restauración?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev5_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p5_2" id="p5_2_0" value="0" {% if not eval or eval.p5_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p5_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p5_2" id="p5_2_1" value="1" {% if eval.p5_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p5_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p5_2" id="p5_2_2" value="2" {% if eval.p5_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p5_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev5_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Bitácoras de respaldo (on-premise / nube), reportes de pruebas de restauración exitosas.</div></div>
+                            </div>
+
+                            <!-- 5.3 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">5.3 ¿Se dispone de un Plan de Continuidad de Negocio (BCP) y Recuperación ante Desastres (DRP) documentado y accesible?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev5_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p5_3" id="p5_3_0" value="0" {% if not eval or eval.p5_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p5_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p5_3" id="p5_3_1" value="1" {% if eval.p5_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p5_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p5_3" id="p5_3_2" value="2" {% if eval.p5_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p5_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev5_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Documento de DRP/BCP, roles del equipo de gestión de crisis, canales de comunicación alternos.</div></div>
+                            </div>
+
+                            <!-- 5.4 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">5.4 ¿Se realizan simulacros o ejercicios periódicos para poner a prueba los planes de continuidad tecnológica?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev5_4"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p5_4" id="p5_4_0" value="0" {% if not eval or eval.p5_4 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p5_4_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p5_4" id="p5_4_1" value="1" {% if eval.p5_4 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p5_4_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p5_4" id="p5_4_2" value="2" {% if eval.p5_4 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p5_4_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev5_4"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Informes posteriores a simulacros, registro de hallazgos y acciones de mejora.</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOMINIO 6 -->
+                    <div class="card shadow-sm border-0 audit-card mb-4">
+                        <div class="card-body">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-code-square"></i> 6. Calidad de Procesos, Adquisición y Desarrollo de Software (ISO 9001 / ISO/IEC 29110)</h5>
+                            
+                            <!-- 6.1 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">6.1 ¿Los proyectos de desarrollo o mantenimiento de software siguen un ciclo estructurado (requisitos, diseño, pruebas y liberación)?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev6_1"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p6_1" id="p6_1_0" value="0" {% if not eval or eval.p6_1 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p6_1_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p6_1" id="p6_1_1" value="1" {% if eval.p6_1 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p6_1_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p6_1" id="p6_1_2" value="2" {% if eval.p6_1 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p6_1_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev6_1"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Especificación de requisitos, casos de prueba, registros de control de versiones y liberaciones.</div></div>
+                            </div>
+
+                            <!-- 6.2 -->
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">6.2 ¿Se evalúa la capacidad, acuerdos de nivel de servicio y seguridad de los proveedores externos y servicios en la nube?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev6_2"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p6_2" id="p6_2_0" value="0" {% if not eval or eval.p6_2 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p6_2_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p6_2" id="p6_2_1" value="1" {% if eval.p6_2 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p6_2_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p6_2" id="p6_2_2" value="2" {% if eval.p6_2 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p6_2_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev6_2"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Contratos con cláusulas de confidencialidad/SLA, evaluaciones periódicas de proveedores.</div></div>
+                            </div>
+
+                            <!-- 6.3 -->
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <p class="fw-bold mb-1">6.3 ¿Se gestionan auditorías internas, no conformidades y acciones correctivas para la mejora continua del departamento?</p>
+                                        <a class="text-decoration-none small text-muted" data-bs-toggle="collapse" href="#ev6_3"><i class="bi bi-info-circle"></i> Ver evidencia requerida</a>
+                                    </div>
+                                    <div class="btn-group flex-shrink-0" role="group">
+                                        <input type="radio" class="btn-check" name="p6_3" id="p6_3_0" value="0" {% if not eval or eval.p6_3 == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger btn-sm" for="p6_3_0">0 - No cumple</label>
+                                        <input type="radio" class="btn-check" name="p6_3" id="p6_3_1" value="1" {% if eval.p6_3 == 1 %}checked{% endif %}>
+                                        <label class="btn btn-outline-warning btn-sm" for="p6_3_1">1 - Parcial</label>
+                                        <input type="radio" class="btn-check" name="p6_3" id="p6_3_2" value="2" {% if eval.p6_3 == 2 %}checked{% endif %}>
+                                        <label class="btn btn-outline-success btn-sm" for="p6_3_2">2 - Cumple</label>
+                                    </div>
+                                </div>
+                                <div class="collapse mt-2" id="ev6_3"><div class="p-2 rounded evidencia-box"><strong>Evidencia:</strong> Informes de auditorías internas previas, plan de acciones correctivas y seguimiento de no conformidades.</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN COMPLEMENTARIA: INFRAESTRUCTURA TÉCNICA (CHECKS) -->
+                    <h4 class="mt-5 mb-3 text-secondary"><i class="bi bi-hdd-rack"></i> Inventario de Infraestructura y Servicios</h4>
                     <div class="row">
-                        <!-- Dominio 1: Políticas -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
+                        <div class="col-md-12 mb-4">
+                            <div class="card shadow-sm border-0 border-top border-info border-4">
                                 <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-file-earmark-text"></i> Políticas y Organización</h5>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="pol_documentada" id="p1">
-                                        <label class="form-check-label ms-2" for="p1">¿Existe una política de seguridad documentada y comunicada?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="pol_activos" id="p2">
-                                        <label class="form-check-label ms-2" for="p2">¿Existe un inventario actualizado de todos los activos de TI?</label>
+                                    <h5 class="fw-bold text-dark mb-3">Servidores Activos</h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_dominio" id="s1" {% if eval.srv_dominio %}checked{% endif %}><label class="form-check-label" for="s1">Servidor de Dominio</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_respaldo" id="s2" {% if eval.srv_respaldo %}checked{% endif %}><label class="form-check-label" for="s2">Servidor de Respaldo</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_correo" id="s3" {% if eval.srv_correo %}checked{% endif %}><label class="form-check-label" for="s3">Servidor de Correo</label></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_telefonia" id="s4" {% if eval.srv_telefonia %}checked{% endif %}><label class="form-check-label" for="s4">Telefonía (PBX)</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_dns" id="s5" {% if eval.srv_dns %}checked{% endif %}><label class="form-check-label" for="s5">Servidor DNS</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_antivirus" id="s6" {% if eval.srv_antivirus %}checked{% endif %}><label class="form-check-label" for="s6">Servidor Antivirus</label></div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_admin" id="s7" {% if eval.srv_admin %}checked{% endif %}><label class="form-check-label" for="s7">Servidor Administrativo</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="srv_camaras" id="s8" {% if eval.srv_camaras %}checked{% endif %}><label class="form-check-label" for="s8">Cámaras (NVR/DVR)</label></div>
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" name="srv_otros" id="s9" onchange="toggleOtrosServidores()" {% if eval.srv_otros %}checked{% endif %}>
+                                                <label class="form-check-label" for="s9">Otros Servidores</label>
+                                            </div>
+                                            <div id="divOtrosServidores" style="display: {% if eval.srv_otros %}block{% else %}none{% endif %};" class="mt-2">
+                                                <input type="text" class="form-control form-control-sm" name="srv_otros_desc" value="{{ eval.srv_otros_desc|default:'' }}" placeholder="Especifique cuáles...">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Dominio 2: Control de Accesos -->
                         <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
+                            <div class="card shadow-sm border-0 border-top border-info border-4 h-100">
                                 <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-person-badge"></i> Control de Accesos</h5>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="acc_passwords" id="a1">
-                                        <label class="form-check-label ms-2" for="a1">¿Se exige una política de contraseñas seguras (longitud/complejidad)?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="acc_mfa" id="a2">
-                                        <label class="form-check-label ms-2" for="a2">¿Se exige Autenticación Multifactor (MFA) para sistemas críticos?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="acc_bajas" id="a3">
-                                        <label class="form-check-label ms-2" for="a3">¿Existe un proceso formal e inmediato para revocar accesos a ex-empleados?</label>
-                                    </div>
+                                    <h5 class="fw-bold text-dark mb-3">Servicios Web</h5>
+                                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="web_pagina" id="w1" {% if eval.web_pagina %}checked{% endif %}><label class="form-check-label" for="w1">Página Web</label></div>
+                                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="web_dominio" id="w2" {% if eval.web_dominio %}checked{% endif %}><label class="form-check-label" for="w2">Dominio de Internet</label></div>
+                                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="web_hosting" id="w3" {% if eval.web_hosting %}checked{% endif %}><label class="form-check-label" for="w3">Hosting Propio/Terceros</label></div>
+                                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="web_servicios" id="w4" {% if eval.web_servicios %}checked{% endif %}><label class="form-check-label" for="w4">Servicios Web / APIs</label></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Dominio 3: Seguridad Física -->
                         <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
+                            <div class="card shadow-sm border-0 border-top border-info border-4 h-100">
                                 <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-building-lock"></i> Seguridad Física</h5>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="fis_site" id="f1">
-                                        <label class="form-check-label ms-2" for="f1">¿Los servidores y redes están en áreas con acceso físico restringido?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="fis_energia" id="f2">
-                                        <label class="form-check-label ms-2" for="f2">¿Se cuenta con UPS y protección contra apagones para sistemas clave?</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Dominio 4: Operaciones y Respaldos -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-hdd-network"></i> Operaciones y Continuidad</h5>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="ope_respaldos" id="o1">
-                                        <label class="form-check-label ms-2" for="o1">¿Se realizan respaldos (backups) regulares de la información crítica?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="ope_pruebas" id="o2">
-                                        <label class="form-check-label ms-2" for="o2">¿Se prueban los respaldos mensualmente para asegurar su restauración?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="ope_antivirus" id="o3">
-                                        <label class="form-check-label ms-2" for="o3">¿Todos los equipos tienen antivirus gestionado y actualizado?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="ope_parches" id="o4">
-                                        <label class="form-check-label ms-2" for="o4">¿Se instalan periódicamente parches de seguridad de Windows/Software?</label>
-                                    </div>
-                                    <div class="form-check form-switch fs-5 mb-3">
-                                        <input class="form-check-input" type="checkbox" name="con_plan" id="o5">
-                                        <label class="form-check-label ms-2" for="o5">¿Tienen un plan de recuperación documentado en caso de desastre (Ransomware/Incendio)?</label>
+                                    <h5 class="fw-bold text-dark mb-3">Seguridad Perimetral y Eléctrica</h5>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted fw-bold d-block mb-2">Perimetral</small>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="seg_biometrico" id="sp1" {% if eval.seg_biometrico %}checked{% endif %}><label class="form-check-label" for="sp1">Biométrico</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="seg_camaras" id="sp2" {% if eval.seg_camaras %}checked{% endif %}><label class="form-check-label" for="sp2">Cámaras</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="seg_acceso" id="sp3" {% if eval.seg_acceso %}checked{% endif %}><label class="form-check-label" for="sp3">Control Acceso</label></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted fw-bold d-block mb-2">Eléctrica</small>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="elec_ups" id="e1" {% if eval.elec_ups %}checked{% endif %}><label class="form-check-label" for="e1">UPS</label></div>
+                                            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="elec_estabilizador" id="e2" {% if eval.elec_estabilizador %}checked{% endif %}><label class="form-check-label" for="e2">Estabilizador</label></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-<!-- Dominio 5: Servidores -->
-                        <div class="col-md-12 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-server"></i> Infraestructura de Servidores</h5>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_dominio" id="s1"><label class="form-check-label ms-2" for="s1">Servidor de Dominio</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_respaldo" id="s2"><label class="form-check-label ms-2" for="s2">Servidor de Respaldo</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_correo" id="s3"><label class="form-check-label ms-2" for="s3">Servidor de Correo</label></div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_telefonia" id="s4"><label class="form-check-label ms-2" for="s4">Telefonía (PBX)</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_dns" id="s5"><label class="form-check-label ms-2" for="s5">Servidor DNS</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_antivirus" id="s6"><label class="form-check-label ms-2" for="s6">Servidor Antivirus</label></div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_admin" id="s7"><label class="form-check-label ms-2" for="s7">Servidor Administrativo</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="srv_camaras" id="s8"><label class="form-check-label ms-2" for="s8">Cámaras (NVR/DVR)</label></div>
-                                            <div class="form-check form-switch fs-5 mb-2">
-                                                <input class="form-check-input" type="checkbox" name="srv_otros" id="s9" onchange="toggleOtrosServidores()">
-                                                <label class="form-check-label ms-2" for="s9">Otros Servidores</label>
-                                            </div>
-                                            <div id="divOtrosServidores" style="display: none;" class="mt-2 p-2 bg-light border rounded">
-                                                <input type="text" class="form-control" name="srv_otros_desc" placeholder="Especifique cuáles...">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Dominio 6 y 7: Web y Perimetral -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-globe"></i> Servicios Web</h5>
-                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_pagina" id="w1"><label class="form-check-label ms-2" for="w1">Página Web</label></div>
-                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_dominio" id="w2"><label class="form-check-label ms-2" for="w2">Dominio de Internet</label></div>
-                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_hosting" id="w3"><label class="form-check-label ms-2" for="w3">Hosting Propio/Terceros</label></div>
-                                    <div class="form-check form-switch fs-5 mb-3"><input class="form-check-input" type="checkbox" name="web_servicios" id="w4"><label class="form-check-label ms-2" for="w4">Servicios Web / APIs</label></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 mb-4">
-                            <div class="card shadow-sm border-0 audit-card h-100">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-primary mb-4"><i class="bi bi-shield-lock"></i> Perimetral y Eléctrica</h5>
-                                    <h6 class="text-secondary fw-bold">Seguridad Perimetral</h6>
-                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="seg_biometrico" id="sp1"><label class="form-check-label ms-2" for="sp1">Control Biométrico</label></div>
-                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="seg_camaras" id="sp2"><label class="form-check-label ms-2" for="sp2">Cámaras de Seguridad</label></div>
-                                    <div class="form-check form-switch fs-5 mb-4"><input class="form-check-input" type="checkbox" name="seg_acceso" id="sp3"><label class="form-check-label ms-2" for="sp3">Control de Acceso (Torniquetes)</label></div>
-                                    
-                                    <h6 class="text-secondary fw-bold">Respaldo Eléctrico</h6>
-                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="elec_ups" id="e1"><label class="form-check-label ms-2" for="e1">UPS (Respaldo ininterrumpido)</label></div>
-                                    <div class="form-check form-switch fs-5 mb-2"><input class="form-check-input" type="checkbox" name="elec_estabilizador" id="e2"><label class="form-check-label ms-2" for="e2">Estabilizador de corriente</label></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Script para mostrar caja de texto de Otros Servidores -->
-                        <script>
-                            function toggleOtrosServidores() {
-                                document.getElementById('divOtrosServidores').style.display = document.getElementById('s9').checked ? 'block' : 'none';
-                            }
-                        </script>
                     <div class="text-end mb-5">
-                        <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm">
-                            <i class="bi bi-cloud-arrow-up"></i> Guardar Evaluación y Analizar
+                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow">
+                            <i class="bi bi-check2-all"></i> Guardar Auditoría y Calcular FODA
                         </button>
                     </div>
                 </form>
@@ -201,5 +580,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleOtrosServidores() {
+            document.getElementById('divOtrosServidores').style.display = document.getElementById('s9').checked ? 'block' : 'none';
+        }
+
+        function reiniciarEvaluacion() {
+            if (confirm('¿Deseas reiniciar todos los reactivos a "0 - No cumple" y apagar los interruptores?')) {
+                // Seleccionar todos los botones de radio con valor "0"
+                document.querySelectorAll('input[type="radio"][value="0"]').forEach(r => r.checked = true);
+                // Apagar todos los checkboxes
+                document.querySelectorAll('input[type="checkbox"]').forEach(sw => sw.checked = false);
+                document.getElementById('divOtrosServidores').style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
