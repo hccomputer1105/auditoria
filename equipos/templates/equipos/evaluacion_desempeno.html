@@ -459,13 +459,16 @@
                                         </td>
                                         <td class="small">{{ baremo.accion }}</td>
                                         <td class="text-end text-nowrap">
-                                            <a href="{% url 'dashboard_persona_desempeno' ev.id %}" class="btn btn-sm btn-primary me-1" title="Ver Dashboard de la Persona">
+                                            <a href="{% url 'dashboard_persona_desempeno' ev.id %}" class="btn btn-sm btn-primary me-1" title="Ver Dashboard">
                                                 <i class="bi bi-speedometer2"></i> Dashboard
                                             </a>
-                                            <a href="{% url 'editar_desempeno' ev.id %}" class="btn btn-sm btn-warning text-dark me-1" title="Modificar Evaluación">
-                                                <i class="bi bi-pencil-square"></i> Modificar
+                                            <a href="{% url 'descargar_pdf_desempeno' ev.id %}" class="btn btn-sm btn-outline-danger me-1" title="Descargar PDF Individual">
+                                                <i class="bi bi-file-earmark-pdf-fill"></i> PDF
                                             </a>
-                                            <a href="{% url 'eliminar_desempeno' ev.id %}" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="return confirm('¿Eliminar esta evaluación de desempeño?');">
+                                            <a href="{% url 'editar_desempeno' ev.id %}" class="btn btn-sm btn-warning text-dark me-1" title="Modificar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                            <a href="{% url 'eliminar_desempeno' ev.id %}" class="btn btn-sm btn-outline-secondary" title="Eliminar" onclick="return confirm('¿Eliminar esta evaluación de desempeño?');">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </td>

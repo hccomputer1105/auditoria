@@ -51,16 +51,16 @@
                     </div>
                 </nav>
 
-                <!-- SELECTOR DE EMPLEADO -->
+                <!-- SELECTOR DE EMPLEADO Y DESCARGA PDF -->
                 <div class="card shadow-sm border-0 mb-4 bg-white">
                     <div class="card-body p-3">
                         <form method="GET" class="row align-items-center g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label fw-bold mb-0 text-dark">
-                                    <i class="bi bi-search text-primary"></i> Seleccionar Colaborador a Analizar:
+                                    <i class="bi bi-search text-primary"></i> Seleccionar Colaborador:
                                 </label>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-5">
                                 <select name="empleado" class="form-select fw-bold border-primary" onchange="this.form.submit()">
                                     {% for emp in lista_empleados %}
                                         <option value="{{ emp }}" {% if emp == empleado_seleccionado %}selected{% endif %}>{{ emp }}</option>
@@ -69,8 +69,13 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-2 text-end">
-                                <button type="submit" class="btn btn-primary w-100 fw-bold">Consultar</button>
+                            <div class="col-md-4 text-end">
+                                <button type="submit" class="btn btn-primary fw-bold me-1">Consultar</button>
+                                {% if empleado_seleccionado %}
+                                    <a href="{% url 'descargar_pdf_rrhh' %}?empleado={{ empleado_seleccionado|urlencode }}" class="btn btn-danger fw-bold">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
+                                    </a>
+                                {% endif %}
                             </div>
                         </form>
                     </div>

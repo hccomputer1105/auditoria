@@ -11,6 +11,14 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+# Permite correr en local y en tu dominio real (cambia tudominio.com por tu dominio o subdominio real)
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'tudominio.com', 'www.tudominio.com', '*']
+
+# Configuración de archivos estáticos (CSS/JS del panel /admin/)
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

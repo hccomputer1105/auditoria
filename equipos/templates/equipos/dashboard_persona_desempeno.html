@@ -39,14 +39,10 @@
             <div class="col-md-10 p-4">
                 
                 <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-4">
-                    <div>
-                        <a href="{% url 'evaluacion_desempeno' %}" class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> Volver</a>
-                        <span class="h4 fw-bold text-dark align-middle mb-0">
-                            <i class="bi bi-person-badge text-primary"></i> {{ ev.nombre_colaborador }}
-                        </span>
-                        <span class="badge bg-secondary ms-2">{{ ev.cargo }} - {{ ev.departamento }}</span>
-                    </div>
-                    <div>
+                   <div>
+                        <a href="{% url 'descargar_pdf_desempeno' ev.id %}" class="btn btn-danger fw-bold me-2">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
+                        </a>
                         <a href="{% url 'editar_desempeno' ev.id %}" class="btn btn-warning fw-bold text-dark">
                             <i class="bi bi-pencil-square"></i> Modificar Evaluación
                         </a>

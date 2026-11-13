@@ -829,6 +829,236 @@ def dashboard_rrhh_view(request):
     }
     return render(request, 'equipos/dashboard_rrhh.html', context)
 
+@login_required(login_url='/cuentas/login/')
+def descargar_pdf_desempeno(request, id):
+    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    perfil = Perfil.objects.filter(usuario=request.user).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+    baremo = ev.diagnostico_baremo()
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    # Encabezado corporativo
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
+    
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 17)
+    p.drawString(45, alto - 45, "INFORME INDIVIDUAL DE DESEMPEÑO (ISO 30414 / 10667)")
+    p.setFont("Helvetica", 11)
+    p.drawString(45, alto - 68, f"Empresa: {empresa_nombre}  |  Resultado Global: {ev.puntaje_total()}/75 pts ({ev.porcentaje_desempeno()}%)")
+
+    # 1. Datos del Colaborador
+    y = alto - 125
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "1. Identificación del Evaluado y Perspectiva")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 24
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    p.drawString(55, y, f"Colaborador:       {ev.nombre_colaborador}")
+    p.drawString(330, y, f"Cargo:          {ev.cargo}")
+    y -= 18
+    p.drawString(55, y, f"Departamento:      {ev.departamento}")
+    p.drawString(330, y, f"Perspectiva:    {ev.perspectiva}")
+    y -= 18
+    fecha_str = ev.fecha_evaluacion.strftime("%d/%m/%Y") if ev.fecha_evaluacion else "Registrado"
+    p.drawString(55, y, f"Fecha Evaluación:  {fecha_str}")
+    p.drawString(330, y, f"Nivel Global:   {baremo['nivel']}")
+
+    # 2. Resumen por Bloques BARS
+    y -= 35
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "2. Resumen por Bloques de Competencias (Escala BARS 1 - 5)")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 24
+    p.setFont("Helvetica-Bold", 10)
+    p.setFillColor(colors.black)
+    p.drawString(55, y, f"• Bloque I - Habilidades Blandas (Soft Skills):              {ev.puntaje_bloque_1()} / 25 pts")
+    y -= 18
+    p.drawString(55, y, f"• Bloque II - Trato al Personal y Relaciones Humanas:     {ev.puntaje_bloque_2()} / 25 pts")
+    y -= 18
+    p.drawString(55, y, f"• Bloque III - Convivencia Grupal y Cultura de Equipo:    {ev.puntaje_bloque_3()} / 25 pts")
+
+    # 3. Desglose de los 15 Reactivos
+    y -= 35
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "3. Desglose Detallado de Conductas Observables")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 22
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    reactivos = [
+        ("1.1 Escucha Activa y Receptividad", ev.b1_1, "2.4 Disponibilidad para Ayudar", ev.b2_4),
+        ("1.2 Comunicación Asertiva y Respetuosa", ev.b1_2, "2.5 Apertura a la Retroalimentación", ev.b2_5),
+        ("1.3 Autocontrol y Manejo Emocional", ev.b1_3, "3.1 Espíritu Colaborativo", ev.b3_1),
+        ("1.4 Adaptabilidad y Flexibilidad", ev.b1_4, "3.2 Resolución Constructiva", ev.b3_2),
+        ("1.5 Responsabilidad e Integridad", ev.b1_5, "3.3 Promoción Clima Positivo", ev.b3_3),
+        ("2.1 Empatía y Sensibilidad", ev.b2_1, "3.4 Reconocimiento y Respaldo", ev.b3_4),
+        ("2.2 Cordialidad y Cortesía Diaria", ev.b2_2, "3.5 Solidaridad y Pertenencia", ev.b3_5),
+        ("2.3 Inclusión y Diversidad", ev.b2_3, "", None),
+    ]
+    for izq_txt, izq_val, der_txt, der_val in reactivos:
+        p.drawString(55, y, f"{izq_txt}: {izq_val}/5")
+        if der_txt:
+            p.drawString(320, y, f"{der_txt}: {der_val}/5")
+        y -= 16
+
+    # 4. Dictamen Baremo y Acuerdos
+    y -= 24
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, f"4. Dictamen Baremo: {baremo['nivel']}")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    # Dividir texto largo de acción recomendada en dos líneas si es necesario
+    accion_txt = baremo['accion']
+    p.drawString(55, y, accion_txt[:95])
+    if len(accion_txt) > 95:
+        y -= 14
+        p.drawString(55, y, accion_txt[95:])
+
+    if ev.observaciones_feedback:
+        y -= 22
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(55, y, "Acuerdos de Retroalimentación (ISO 10667):")
+        y -= 14
+        p.setFont("Helvetica", 9)
+        p.drawString(55, y, ev.observaciones_feedback[:105])
+
+    p.setFont("Helvetica", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Documento confidencial generado bajo estándares ISO 30414 e ISO 10667.")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Desempeno_{ev.nombre_colaborador}.pdf"'
+    return response
+
+
+@login_required(login_url='/cuentas/login/')
+def descargar_pdf_rrhh(request):
+    empleado = request.GET.get('empleado', '').strip()
+    perfil = Perfil.objects.filter(usuario=request.user).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+
+    carga_emp = EvaluacionCargaLaboral.objects.filter(
+        usuario_empresa=request.user, nombre_colaborador__iexact=empleado
+    ).order_by('-fecha_evaluacion').first()
+
+    desemp_emp = EvaluacionDesempeno.objects.filter(
+        usuario_empresa=request.user, nombre_colaborador__iexact=empleado
+    ).order_by('-fecha_evaluacion').first()
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    # Encabezado
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
+    
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 17)
+    p.drawString(45, alto - 45, "REPORTE INTEGRAL DE TALENTO HUMANO (RRHH)")
+    p.setFont("Helvetica", 11)
+    p.drawString(45, alto - 68, f"Empresa: {empresa_nombre}  |  Colaborador Analizado: {empleado or 'No especificado'}")
+
+    y = alto - 130
+
+    # SECCIÓN 1: CARGA LABORAL
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "1. Diagnóstico de Carga Laboral y Saturación Operativa")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 25
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    if carga_emp:
+        b1_c = getattr(carga_emp, 'c1_1', 0) + getattr(carga_emp, 'c1_2', 0) + getattr(carga_emp, 'c1_3', 0)
+        b2_c = getattr(carga_emp, 'c2_1', 0) + getattr(carga_emp, 'c2_2', 0) + getattr(carga_emp, 'c2_3', 0)
+        b3_c = getattr(carga_emp, 'c3_1', 0) + getattr(carga_emp, 'c3_2', 0) + getattr(carga_emp, 'c3_3', 0)
+        b4_c = getattr(carga_emp, 'c4_1', 0) + getattr(carga_emp, 'c4_2', 0) + getattr(carga_emp, 'c4_3', 0)
+
+        p.drawString(55, y, f"Cargo Evaluado:          {carga_emp.cargo_actual} ({carga_emp.departamento})")
+        y -= 18
+        p.drawString(55, y, f"Roles Adicionales:       {carga_emp.roles_adicionales or 'Ninguno'}")
+        y -= 18
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(55, y, f"Nivel de Saturación:     {carga_emp.porcentaje_saturacion()}%   |   Equivalencia FTE: {carga_emp.personas_equivalentes()}")
+        y -= 22
+        p.setFont("Helvetica", 10)
+        p.drawString(65, y, f"• Volumen de Tareas: {b1_c}/9 pts      • Jornada y Tiempo: {b2_c}/9 pts")
+        y -= 18
+        p.drawString(65, y, f"• Multiplicidad Roles: {b3_c}/9 pts    • Impacto y Fatiga: {b4_c}/9 pts")
+    else:
+        p.setFont("Helvetica-Oblique", 10)
+        p.drawString(55, y, "Este colaborador aún no posee registros en el módulo de Carga Laboral.")
+
+    # SECCIÓN 2: EVALUACIÓN DEL DESEMPEÑO
+    y -= 45
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "2. Evaluación del Desempeño Centrado en la Persona (ISO 30414 / 10667)")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 25
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    if desemp_emp:
+        baremo = desemp_emp.diagnostico_baremo()
+        p.drawString(55, y, f"Perspectiva Evaluada:    {desemp_emp.perspectiva}")
+        y -= 18
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(55, y, f"Puntaje Total:           {desemp_emp.puntaje_total()} / 75 pts ({desemp_emp.porcentaje_desempeno()}%)   |   Nivel: {baremo['nivel']}")
+        y -= 22
+        p.setFont("Helvetica", 10)
+        p.drawString(65, y, f"• Bloque I (Habilidades Blandas):         {desemp_emp.puntaje_bloque_1()} / 25 pts")
+        y -= 18
+        p.drawString(65, y, f"• Bloque II (Trato y Relaciones Humanas): {desemp_emp.puntaje_bloque_2()} / 25 pts")
+        y -= 18
+        p.drawString(65, y, f"• Bloque III (Convivencia y Cultura):     {desemp_emp.puntaje_bloque_3()} / 25 pts")
+        y -= 24
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(55, y, "Recomendación Técnica:")
+        y -= 15
+        p.setFont("Helvetica", 9)
+        p.drawString(55, y, baremo['accion'][:98])
+        if len(baremo['accion']) > 98:
+            y -= 14
+            p.drawString(55, y, baremo['accion'][98:])
+    else:
+        p.setFont("Helvetica-Oblique", 10)
+        p.drawString(55, y, "Este colaborador aún no posee registros en el módulo de Evaluación de Desempeño.")
+
+    p.setFont("Helvetica", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Reporte consolidado generado automáticamente por la Plataforma de Auditoría y Gestión Empresarial.")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    nombre_archivo = empleado.replace(" ", "_") if empleado else "Colaborador"
+    response['Content-Disposition'] = f'attachment; filename="Reporte_RRHH_{nombre_archivo}.pdf"'
+    return response
+
 
 def es_administrador(user):
     return user.is_staff or user.is_superuser

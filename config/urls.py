@@ -21,6 +21,8 @@ from equipos.views import (
     editar_desempeno_view,
     dashboard_persona_desempeno_view,
     dashboard_rrhh_view,
+    descargar_pdf_rrhh,
+    descargar_pdf_desempeno,
 )
 
 urlpatterns = [
@@ -49,4 +51,8 @@ urlpatterns = [
     path('eliminar-desempeno/<int:id>/', eliminar_desempeno_view, name='eliminar_desempeno'),
     path('desempeno-persona/<int:id>/', dashboard_persona_desempeno_view, name='dashboard_persona_desempeno'),
     path('dashboard-rrhh/', dashboard_rrhh_view, name='dashboard_rrhh'),
+    path('desempeno-persona/<int:id>/', dashboard_persona_desempeno_view, name='dashboard_persona_desempeno'),
+    path('desempeno-pdf/<int:id>/', descargar_pdf_desempeno, name='descargar_pdf_desempeno'),
+    path('dashboard-rrhh/', dashboard_rrhh_view, name='dashboard_rrhh'),
+    path('rrhh-pdf/', descargar_pdf_rrhh, name='descargar_pdf_rrhh'),
 ]
