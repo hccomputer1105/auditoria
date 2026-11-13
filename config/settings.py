@@ -60,7 +60,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     # ... el resto de tus middlewares igual ...
 ]
-]
+
 
 ROOT_URLCONF = 'config.urls'
 
