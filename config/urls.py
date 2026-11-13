@@ -9,7 +9,11 @@ from equipos.views import (
     evaluacion_marketing_view,
     dashboard_marketing_view,
     carga_laboral_view,
-    eliminar_carga_view
+    eliminar_carga_view,
+    # NUEVAS VISTAS DE ADMINISTRADOR GLOBAL:
+    admin_dashboard_view,
+    admin_empresa_detalle_view,
+    exportar_reporte_csv
 )
 
 urlpatterns = [
@@ -22,7 +26,11 @@ urlpatterns = [
     path('evaluacion/', evaluacion_view, name='evaluacion'),
     path('dashboard-marketing/', dashboard_marketing_view, name='dashboard_marketing'),
     path('evaluacion-marketing/', evaluacion_marketing_view, name='evaluacion_marketing'),
-    # NUEVAS RUTAS DE CARGA LABORAL:
     path('carga-laboral/', carga_laboral_view, name='carga_laboral'),
     path('eliminar-carga/<int:id>/', eliminar_carga_view, name='eliminar_carga'),
+    
+    # RUTAS DEL PANEL MAESTRO DE ADMINISTRADOR:
+    path('panel-admin/', admin_dashboard_view, name='admin_dashboard'),
+    path('panel-admin/empresa/<int:user_id>/', admin_empresa_detalle_view, name='admin_empresa_detalle'),
+    path('panel-admin/exportar/<int:user_id>/', exportar_reporte_csv, name='exportar_reporte_csv'),
 ]

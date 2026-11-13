@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Maestro - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar-admin { min-height: 100vh; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+        .nav-link { color: #cbd5e1; margin-bottom: 6px; border-radius: 6px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #334155; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- MENÚ LATERAL EXCLUSIVO DE ADMINISTRADOR -->
+            <div class="col-md-2 sidebar-admin p-3 text-white">
+                <div class="text-center mt-2 mb-4">
+                    <span class="badge bg-warning text-dark mb-1">MODO CONSULTOR</span>
+                    <h4 class="fw-bold text-white"><i class="bi bi-shield-shaded text-warning"></i> Master Admin</h4>
+                </div>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="{% url 'admin_dashboard' %}" class="nav-link active">
+                            <i class="bi bi-grid-1x2-fill me-2 text-warning"></i> Resumen Global
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#tabla-empresas" class="nav-link">
+                            <i class="bi bi-buildings-fill me-2 text-info"></i> Empresas y Usuarios
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <a href="/admin/" target="_blank" class="nav-link">
+                            <i class="bi bi-database-gear me-2 text-secondary"></i> Gestión Django Admin
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <!-- Cabecera -->
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-dark fw-bold">
+                        <i class="bi bi-globe2 text-primary"></i> Centro de Control Multi-Empresa
+                    </span>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-dark me-3 py-2 px-3"><i class="bi bi-person-badge"></i> Admin: {{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</button>
+                        </form>
+                    </div>
+                </nav>
+
+                <!-- KPIs GLOBALES -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold opacity-75"><i class="bi bi-building"></i> Empresas Registradas</h6>
+                                <h1 class="display-5 fw-bold mb-0">{{ total_empresas }}</h1>
+                                <small>Clientes activos en plataforma</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-dark text-white shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold text-info"><i class="bi bi-pc-display"></i> Equipos Totales</h6>
+                                <h1 class="display-5 fw-bold mb-0">{{ total_equipos_global }}</h1>
+                                <small>Activos inventariados en total</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase small fw-bold opacity-75"><i class="bi bi-clipboard2-check"></i> Auditorías Realizadas</h6>
+                                <h1 class="display-5 fw-bold mb-0">{{ total_evaluaciones_global }}</h1>
+                                <small>TI ({{ total_eval_ti }}) | Mkt ({{ total_eval_mkt }}) | RRHH ({{ total_eval_hr }})</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-white shadow-sm border-0 h-100 p-3 d-flex justify-content-center">
+                            <h6 class="fw-bold text-secondary mb-1"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Exportación Directa</h6>
+                            <p class="small text-muted mb-0">Selecciona cualquier empresa en la tabla inferior para inspeccionar sus activos o descargar su reporte consolidado en CSV/Excel.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRÁFICOS GLOBALES -->
+ <!-- GRÁFICOS GLOBALES -->
+                <div class="row mb-4">
+                    <div class="col-md-7">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-secondary mb-3">Cantidad de Equipos Registrados por Empresa</h6>
+                                <div style="position: relative; height: 250px; width: 100%;">
+                                    <canvas id="chartEquiposEmpresas" 
+                                            data-labels='{{ nombres_empresas|safe }}' 
+                                            data-values='{{ cantidades_equipos|safe }}'>
+                                    </canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-secondary mb-3">Distribución de Evaluaciones por Área</h6>
+                                <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+                                    <canvas id="chartTiposEvaluacion" 
+                                            data-ti="{{ total_eval_ti }}" 
+                                            data-mkt="{{ total_eval_mkt }}" 
+                                            data-hr="{{ total_eval_hr }}">
+                                    </canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLA DE EMPRESAS Y USUARIOS -->
+                <div class="card shadow-sm border-0" id="tabla-empresas">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-people-fill text-primary"></i> Directorio de Usuarios y Empresas Auditadas</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Empresa / Cliente</th>
+                                        <th>Usuario / Contacto</th>
+                                        <th class="text-center">Equipos TI</th>
+                                        <th class="text-center">Evaluaciones Completadas</th>
+                                        <th class="text-end">Acciones y Reportes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emp in empresas_data %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ emp.nombre_empresa }}</strong><br>
+                                            <small class="text-muted">Registrado: {{ emp.fecha_registro|date:"d/m/Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold">{{ emp.username }}</span><br>
+                                            <small class="text-muted">{{ emp.email|default:"Sin correo" }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary fs-6">{{ emp.equipos_count }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if emp.tiene_ti %}<span class="badge bg-info text-dark me-1">ISO TI</span>{% endif %}
+                                            {% if emp.tiene_mkt %}<span class="badge bg-primary me-1">Marketing</span>{% endif %}
+                                            {% if emp.hr_count > 0 %}<span class="badge bg-warning text-dark">Carga ({{ emp.hr_count }})</span>{% endif %}
+                                            {% if not emp.tiene_ti and not emp.tiene_mkt and emp.hr_count == 0 %}
+                                                <span class="text-muted small fst-italic">Sin evaluaciones</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{% url 'admin_empresa_detalle' emp.user_id %}" class="btn btn-sm btn-outline-primary me-1">
+                                                <i class="bi bi-eye"></i> Ver Equipos y Auditorías
+                                            </a>
+                                            <a href="{% url 'exportar_reporte_csv' emp.user_id %}" class="btn btn-sm btn-success">
+                                                <i class="bi bi-download"></i> Descargar Reporte
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Aún no hay empresas registradas (solo usuarios administradores).</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gráfico de Barras: Equipos por Empresa
+        const canvasEmpresas = document.getElementById('chartEquiposEmpresas');
+        const labelsEmpresas = JSON.parse(canvasEmpresas.dataset.labels || '[]');
+        const dataEmpresas = JSON.parse(canvasEmpresas.dataset.values || '[]');
+
+        new Chart(canvasEmpresas, {
+            type: 'bar',
+            data: {
+                labels: labelsEmpresas,
+                datasets: [{
+                    label: 'Equipos Registrados',
+                    data: dataEmpresas,
+                    backgroundColor: '#0d6efd',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+
+        // Gráfico Circular: Evaluaciones por Área
+        const canvasEval = document.getElementById('chartTiposEvaluacion');
+        const evalTi = Number(canvasEval.dataset.ti || 0);
+        const evalMkt = Number(canvasEval.dataset.mkt || 0);
+        const evalHr = Number(canvasEval.dataset.hr || 0);
+
+        new Chart(canvasEval, {
+            type: 'doughnut',
+            data: {
+                labels: ['Auditoría TI (ISO)', 'Marketing y Ventas', 'Carga Laboral'],
+                datasets: [{
+                    data: [evalTi, evalMkt, evalHr],
+                    backgroundColor: ['#0dcaf0', '#6f42c1', '#fd7e14']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
+</body>
+</html>

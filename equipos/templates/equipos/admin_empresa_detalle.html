@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Empresa - {{ nombre_empresa }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar-admin { min-height: 100vh; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+        .nav-link { color: #cbd5e1; margin-bottom: 6px; border-radius: 6px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #334155; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- MENÚ LATERAL -->
+            <div class="col-md-2 sidebar-admin p-3 text-white">
+                <div class="text-center mt-2 mb-4">
+                    <span class="badge bg-warning text-dark mb-1">MODO CONSULTOR</span>
+                    <h4 class="fw-bold text-white"><i class="bi bi-shield-shaded text-warning"></i> Master Admin</h4>
+                </div>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a href="{% url 'admin_dashboard' %}" class="nav-link">
+                            <i class="bi bi-arrow-left-circle me-2 text-warning"></i> Volver al Resumen
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-4">
+                    <div>
+                        <h4 class="fw-bold text-primary mb-0"><i class="bi bi-building"></i> {{ nombre_empresa }}</h4>
+                        <small class="text-muted">Usuario: <strong>{{ cliente.username }}</strong> | Email: {{ cliente.email|default:"No registrado" }}</small>
+                    </div>
+                    <div>
+                        <a href="{% url 'exportar_reporte_csv' cliente.id %}" class="btn btn-success">
+                            <i class="bi bi-file-earmark-excel"></i> Descargar Reporte Completo (CSV)
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Resumen de Evaluaciones de la Empresa -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0 border-top border-info border-4 h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-secondary">Auditoría Sistemas (ISO)</h6>
+                                {% if eval_ti %}
+                                    <h3 class="fw-bold text-dark">{{ puntaje_ti }} / 42 pts</h3>
+                                    <small class="text-success"><i class="bi bi-check-circle"></i> Evaluación completada</small>
+                                {% else %}
+                                    <p class="text-muted mb-0 fst-italic">Pendiente por evaluar</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0 border-top border-primary border-4 h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-secondary">Auditoría Marketing y Ventas</h6>
+                                {% if eval_mkt %}
+                                    <h3 class="fw-bold text-dark">{{ puntaje_mkt }} / 130 pts</h3>
+                                    <small class="text-success"><i class="bi bi-check-circle"></i> Evaluación completada</small>
+                                {% else %}
+                                    <p class="text-muted mb-0 fst-italic">Pendiente por evaluar</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0 border-top border-warning border-4 h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-secondary">Puestos Evaluados (Carga Laboral)</h6>
+                                <h3 class="fw-bold text-dark">{{ evals_hr.count }} puestos</h3>
+                                <small class="text-muted">Registros de saturación operativa</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Equipos de esta Empresa -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-pc-display"></i> Inventario de Equipos ({{ equipos.count }})</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Equipo</th>
+                                        <th>Tipo</th>
+                                        <th>Asignado a</th>
+                                        <th>Departamento</th>
+                                        <th>Estatus</th>
+                                        <th>Antivirus</th>
+                                        <th>Lic. Windows / Office</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for eq in equipos %}
+                                    <tr>
+                                        <td class="fw-bold">{{ eq.nombre_equipo }}</td>
+                                        <td>{{ eq.tipo_equipo }}</td>
+                                        <td>{{ eq.usuario_asignado }}</td>
+                                        <td>{{ eq.departamento }}</td>
+                                        <td>
+                                            <span class="badge {% if eq.estatus == 'Bueno' %}bg-success{% elif eq.estatus == 'Malo' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                                {{ eq.estatus }}
+                                            </span>
+                                        </td>
+                                        <td>{% if eq.tiene_antivirus %}✅ Activo{% else %}❌ Sin AV{% endif %}</td>
+                                        <td>
+                                            Win: {% if eq.licencia_windows %}✅{% else %}❌{% endif %} | 
+                                            Off: {% if eq.licencia_office %}✅{% else %}❌{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="7" class="text-center text-muted py-3">Esta empresa no tiene equipos registrados.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Carga Laboral de esta Empresa -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-person-lines-fill"></i> Diagnóstico de Carga Laboral</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Colaborador</th>
+                                        <th>Cargo</th>
+                                        <th>Roles Adicionales</th>
+                                        <th>Saturación</th>
+                                        <th>Equivalencia FTE</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hr in evals_hr %}
+                                    <tr>
+                                        <td class="fw-bold">{{ hr.nombre_colaborador }}</td>
+                                        <td>{{ hr.cargo_actual }} ({{ hr.departamento }})</td>
+                                        <td>{{ hr.roles_adicionales|default:"Ninguno" }}</td>
+                                        <td><strong>{{ hr.porcentaje_saturacion }}%</strong></td>
+                                        <td>{{ hr.personas_equivalentes }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="5" class="text-center text-muted py-3">No hay evaluaciones de carga laboral para esta empresa.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

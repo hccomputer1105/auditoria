@@ -1,11 +1,17 @@
+import csv
+import json
+from django.http import HttpResponse
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Computadora, Perfil, EvaluacionISO
-from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing
 from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral
+
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_view(request):
+    if request.user.is_staff:
+        return redirect('admin_dashboard')
+
     equipos = Computadora.objects.filter(usuario_empresa=request.user)
     total_equipos = equipos.count()
     
@@ -119,15 +125,11 @@ def dashboard_view(request):
     return render(request, 'equipos/dashboard.html', context)
 
 
-
-
-
 @login_required(login_url='/cuentas/login/')
 def inventario_view(request):
     if request.method == 'POST':
-        # Recibir los datos del formulario HTML
         nuevo_equipo = Computadora(
-            usuario_empresa=request.user, # Asignamos la empresa actual
+            usuario_empresa=request.user,
             tipo_equipo=request.POST.get('tipo_equipo'),
             estatus=request.POST.get('estatus'),
             tiene_antivirus=request.POST.get('tiene_antivirus') == 'on',
@@ -141,26 +143,20 @@ def inventario_view(request):
             version_windows=request.POST.get('version_windows', ''),
             licencia_erp=request.POST.get('licencia_erp') == 'on',
             tipo_erp=request.POST.get('tipo_erp', ''),
-            
-            # Valores por defecto para campos obligatorios antiguos
             nombre_equipo=str(request.POST.get('tipo_equipo')) + " Registrado",
             sistema_operativo="No definido",
             ultima_actualizacion="2024-01-01",
             ultimo_mantenimiento="2024-01-01"
         )
-        nuevo_equipo.save() 
+        nuevo_equipo.save()
         return redirect('inventario')
         
-    # Buscar los equipos del usuario actual ordenados por fecha
     mis_equipos = Computadora.objects.filter(usuario_empresa=request.user).order_by('-fecha_auditoria')
-    
-    # Enviar los equipos al HTML
     return render(request, 'equipos/inventario.html', {'mis_equipos': mis_equipos})
 
 
 @login_required(login_url='/cuentas/login/')
 def eliminar_equipo(request, id):
-    # Buscar el equipo asegurando que pertenezca al usuario actual
     equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
     equipo.delete()
     return redirect('inventario')
@@ -171,7 +167,6 @@ def editar_equipo(request, id):
     equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
     
     if request.method == 'POST':
-        # Actualizar los datos con lo que venga del formulario
         equipo.tipo_equipo = request.POST.get('tipo_equipo')
         equipo.estatus = request.POST.get('estatus')
         equipo.tiene_antivirus = request.POST.get('tiene_antivirus') == 'on'
@@ -199,7 +194,6 @@ def evaluacion_view(request):
         if not evaluacion:
             evaluacion = EvaluacionISO(usuario_empresa=request.user)
             
-        # Guardar los 21 reactivos numéricos (0, 1 o 2)
         campos_numericos = [
             'p1_1', 'p1_2', 'p1_3',
             'p2_1', 'p2_2', 'p2_3', 'p2_4',
@@ -211,7 +205,6 @@ def evaluacion_view(request):
         for campo in campos_numericos:
             setattr(evaluacion, campo, int(request.POST.get(campo, 0)))
 
-        # Guardar infraestructura complementaria
         evaluacion.srv_dominio = request.POST.get('srv_dominio') == 'on'
         evaluacion.srv_respaldo = request.POST.get('srv_respaldo') == 'on'
         evaluacion.srv_correo = request.POST.get('srv_correo') == 'on'
@@ -239,6 +232,8 @@ def evaluacion_view(request):
         return redirect('dashboard')
         
     return render(request, 'equipos/evaluacion.html', {'eval': evaluacion})
+
+
 @login_required(login_url='/cuentas/login/')
 def evaluacion_marketing_view(request):
     evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
@@ -258,19 +253,18 @@ def evaluacion_marketing_view(request):
             
         evaluacion.save()
         return redirect('dashboard_marketing')
-        # Por ahora recarga la misma página con mensaje de éxito; en el siguiente paso redirigirá al Dashboard de Marketing
-        return render(request, 'equipos/evaluacion_marketing.html', {'eval': evaluacion, 'guardado': True})
         
     return render(request, 'equipos/evaluacion_marketing.html', {'eval': evaluacion})
+
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_marketing_view(request):
     evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
     
     puntaje_c1 = 0
-    max_c1 = 55  # 11 ítems x 5 pts
+    max_c1 = 55
     puntaje_c2 = 0
-    max_c2 = 75  # 15 ítems x 5 pts
+    max_c2 = 75
     puntaje_total = 0
     max_total = 130
     
@@ -294,7 +288,6 @@ def dashboard_marketing_view(request):
     }
 
     if evaluacion:
-        # 1. Cálculos por bloque
         campos_c1 = [f'm1_{i}' for i in range(1, 12)]
         campos_c2 = [f'm2_{i}' for i in range(1, 16)]
         
@@ -305,7 +298,6 @@ def dashboard_marketing_view(request):
         score_madurez = round((puntaje_total / max_total) * 100)
         score_brecha = 100 - score_madurez
 
-        # 2. Mapeo de Criterios para FODA
         criterios_mkt = {
             'm1_1': ("Responsabilidades y metas estratégicas de marketing formalmente documentadas.", "Marketing opera sin metas claras absorbiendo tareas operativas residuales."),
             'm1_2': ("Liderazgo estratégico definido con perfil ejecutivo (CMO/Director) en toma de decisiones.", "Falta de liderazgo especializado en marketing; decisiones reactivas."),
@@ -344,7 +336,6 @@ def dashboard_marketing_view(request):
             else:
                 debilidades.append(txt_d)
 
-        # Amenazas críticas
         if evaluacion.m2_4 == 1:
             amenazas.append("Riesgo crítico de caída de ingresos por dependencia de un único canal de adquisición.")
         if evaluacion.m2_10 == 1 or evaluacion.m2_11 == 1:
@@ -354,7 +345,6 @@ def dashboard_marketing_view(request):
         if evaluacion.m2_14 == 1:
             amenazas.append("Erosión silenciosa de la cartera actual por falta de monitoreo de fuga de clientes (Churn).")
 
-        # 3. Generación de Objetivos SMART (30 / 60 / 90 Días) según fugas (1 o 3 pts)
         if evaluacion.m2_1 < 5 or evaluacion.m2_2 < 5:
             plan_smart_30.append("Definir y documentar el ICP y la Propuesta Única de Valor (USP) en un taller conjunto Marketing-Ventas, logrando un 100% de adopción en el pitch comercial en los próximos 30 días.")
         if evaluacion.m2_7 < 5 or evaluacion.m2_8 < 5:
@@ -382,31 +372,25 @@ def dashboard_marketing_view(request):
         if not plan_smart_90:
             plan_smart_90.append("Escalar el presupuesto en un 20% hacia los 2 canales con mayor LTV/CAC comprobado durante el trimestre (90 días).")
 
-        # 4. Diagnóstico Táctico Framework RACE
-        # REACH (Atracción: m2_3, m2_4, m2_6)
         if evaluacion.m2_4 < 5 or evaluacion.m2_6 < 5:
             race_fases['Reach (Alcance y Atracción)'].append("Diversificar fuentes de tráfico combinando posicionamiento orgánico (SEO) con pauta segmentada por CAC.")
         else:
             race_fases['Reach (Alcance y Atracción)'].append("Canales de adquisición diversificados y estrategia SEO/Paid consolidada.")
 
-        # ACT (Interacción: m1_11, m2_2, m2_5)
         if evaluacion.m2_5 < 5 or evaluacion.m1_11 < 5:
             race_fases['Act (Interacción y Captación)'].append("Optimizar arquitectura persuasiva del sitio web (CTAs y prueba social) y sostener calendario de contenidos.")
         else:
             race_fases['Act (Interacción y Captación)'].append("Ecosistema web con propuesta de valor clara y producción sistemática de contenidos.")
 
-        # CONVERT (Conversión: m2_7, m2_8, m2_10, m2_11)
         if evaluacion.m2_7 < 5 or evaluacion.m2_8 < 5 or evaluacion.m2_10 < 5:
             race_fases['Convert (Conversión y Smarketing)'].append("Unificar CRM, aplicar reglas MQL/SQL y exigir cumplimiento de SLA comercial en tiempos de respuesta.")
         else:
             race_fases['Convert (Conversión y Smarketing)'].append("Sinergia Smarketing operativa con trazabilidad completa en CRM y medición de ROAS/CAC.")
 
-        # ENGAGE (Fidelización: m2_12, m2_13, m2_14, m2_15)
         if evaluacion.m2_13 < 5 or evaluacion.m2_14 < 5 or evaluacion.m2_15 < 5:
             race_fases['Engage (Fidelización y Postventa)'].append("Activar secuencias de nutrición, medición periódica de NPS/Churn y programa formal de referidos.")
         else:
             race_fases['Engage (Fidelización y Postventa)'].append("Estrategia de retención activa con monitoreo de lealtad (NPS) y recurrencia.")
-
     else:
         debilidades.append("Aún no se ha completado la Evaluación de Marketing y Ventas.")
         oportunidades.append("Dirígete a 'Evaluación Marketing' para diagnosticar el área comercial.")
@@ -431,6 +415,8 @@ def dashboard_marketing_view(request):
         'race_fases': race_fases,
     }
     return render(request, 'equipos/dashboard_marketing.html', context)
+
+
 @login_required(login_url='/cuentas/login/')
 def carga_laboral_view(request):
     if request.method == 'POST':
@@ -458,7 +444,6 @@ def carga_laboral_view(request):
 
     evaluaciones = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
     
-    # Resumen estadístico para el encabezado
     total_evaluados = evaluaciones.count()
     criticos = sum(1 for e in evaluaciones if e.porcentaje_saturacion() > 65)
     moderados = sum(1 for e in evaluaciones if 35 < e.porcentaje_saturacion() <= 65)
@@ -479,3 +464,156 @@ def eliminar_carga_view(request, id):
     registro = get_object_or_404(EvaluacionCargaLaboral, id=id, usuario_empresa=request.user)
     registro.delete()
     return redirect('carga_laboral')
+
+
+def es_administrador(user):
+    return user.is_staff or user.is_superuser
+
+
+@login_required(login_url='/cuentas/login/')
+@user_passes_test(es_administrador, login_url='/')
+def admin_dashboard_view(request):
+    clientes = User.objects.filter(is_staff=False).order_by('-date_joined')
+    
+    total_empresas = clientes.count()
+    total_equipos_global = Computadora.objects.count()
+    total_eval_ti = EvaluacionISO.objects.count()
+    total_eval_mkt = EvaluacionMarketing.objects.count()
+    total_eval_hr = EvaluacionCargaLaboral.objects.count()
+    total_evaluaciones_global = total_eval_ti + total_eval_mkt + total_eval_hr
+
+    empresas_data = []
+    nombres_empresas = []
+    cantidades_equipos = []
+
+    for cliente in clientes:
+        perfil = Perfil.objects.filter(usuario=cliente).first()
+        nombre_emp = perfil.nombre_empresa if perfil else f"Empresa ({cliente.username})"
+        
+        eq_count = Computadora.objects.filter(usuario_empresa=cliente).count()
+        tiene_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).exists()
+        tiene_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).exists()
+        hr_count = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).count()
+
+        empresas_data.append({
+            'user_id': cliente.id,
+            'username': cliente.username,
+            'email': cliente.email,
+            'nombre_empresa': nombre_emp,
+            'fecha_registro': cliente.date_joined,
+            'equipos_count': eq_count,
+            'tiene_ti': tiene_ti,
+            'tiene_mkt': tiene_mkt,
+            'hr_count': hr_count,
+        })
+        
+        nombres_empresas.append(nombre_emp)
+        cantidades_equipos.append(eq_count)
+
+    context = {
+        'total_empresas': total_empresas,
+        'total_equipos_global': total_equipos_global,
+        'total_evaluaciones_global': total_evaluaciones_global,
+        'total_eval_ti': total_eval_ti,
+        'total_eval_mkt': total_eval_mkt,
+        'total_eval_hr': total_eval_hr,
+        'empresas_data': empresas_data,
+        'nombres_empresas': json.dumps(nombres_empresas),
+        'cantidades_equipos': json.dumps(cantidades_equipos),
+    }
+    return render(request, 'equipos/admin_dashboard.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+@user_passes_test(es_administrador, login_url='/')
+def admin_empresa_detalle_view(request, user_id):
+    cliente = get_object_or_404(User, id=user_id)
+    perfil = Perfil.objects.filter(usuario=cliente).first()
+    nombre_empresa = perfil.nombre_empresa if perfil else cliente.username
+
+    equipos = Computadora.objects.filter(usuario_empresa=cliente)
+    eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
+    eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
+    evals_hr = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+
+    puntaje_ti = 0
+    if eval_ti:
+        campos_ti = [f'p{d}_{q}' for d, max_q in [(1,3),(2,4),(3,3),(4,4),(5,4),(6,3)] for q in range(1, max_q+1)]
+        puntaje_ti = sum(getattr(eval_ti, c, 0) for c in campos_ti)
+
+    puntaje_mkt = 0
+    if eval_mkt:
+        campos_mkt = [f'm1_{i}' for i in range(1, 12)] + [f'm2_{i}' for i in range(1, 16)]
+        puntaje_mkt = sum(getattr(eval_mkt, c, 1) for c in campos_mkt)
+
+    context = {
+        'cliente': cliente,
+        'nombre_empresa': nombre_empresa,
+        'equipos': equipos,
+        'eval_ti': eval_ti,
+        'puntaje_ti': puntaje_ti,
+        'eval_mkt': eval_mkt,
+        'puntaje_mkt': puntaje_mkt,
+        'evals_hr': evals_hr,
+    }
+    return render(request, 'equipos/admin_empresa_detalle.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+@user_passes_test(es_administrador, login_url='/')
+def exportar_reporte_csv(request, user_id):
+    cliente = get_object_or_404(User, id=user_id)
+    perfil = Perfil.objects.filter(usuario=cliente).first()
+    nombre_empresa = perfil.nombre_empresa if perfil else cliente.username
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="Reporte_Auditoria_{cliente.username}.csv"'
+    response.write('\ufeff')
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['REPORTE CONSOLIDADO DE AUDITORIA EMPRESARIAL'])
+    writer.writerow(['Empresa:', nombre_empresa, 'Usuario:', cliente.username, 'Email:', cliente.email])
+    writer.writerow([])
+
+    writer.writerow(['--- 1. INVENTARIO DE EQUIPOS TI ---'])
+    writer.writerow(['Equipo', 'Tipo', 'Usuario Asignado', 'Departamento', 'Estatus', 'Sistema Operativo', 'Antivirus', 'Lic. Windows', 'Lic. Office'])
+    for eq in Computadora.objects.filter(usuario_empresa=cliente):
+        writer.writerow([
+            eq.nombre_equipo, eq.tipo_equipo, eq.usuario_asignado, eq.departamento,
+            eq.estatus, eq.sistema_operativo,
+            'Si' if eq.tiene_antivirus else 'No',
+            'Si' if eq.licencia_windows else 'No',
+            'Si' if eq.licencia_office else 'No'
+        ])
+    writer.writerow([])
+
+    writer.writerow(['--- 2. AUDITORIA MULTINORMA TI (BASE 42 PTS) ---'])
+    eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).first()
+    if eval_ti:
+        campos_ti = [f'p{d}_{q}' for d, max_q in [(1,3),(2,4),(3,3),(4,4),(5,4),(6,3)] for q in range(1, max_q+1)]
+        total_ti = sum(getattr(eval_ti, c, 0) for c in campos_ti)
+        writer.writerow(['Puntaje Obtenido:', f'{total_ti} / 42 pts', 'Porcentaje Madurez:', f'{round((total_ti/42)*100)}%'])
+    else:
+        writer.writerow(['Estado:', 'Pendiente por realizar'])
+    writer.writerow([])
+
+    writer.writerow(['--- 3. AUDITORIA MARKETING Y SMARKETING (BASE 130 PTS) ---'])
+    eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).first()
+    if eval_mkt:
+        campos_mkt = [f'm1_{i}' for i in range(1, 12)] + [f'm2_{i}' for i in range(1, 16)]
+        total_mkt = sum(getattr(eval_mkt, c, 1) for c in campos_mkt)
+        writer.writerow(['Puntaje Obtenido:', f'{total_mkt} / 130 pts', 'Porcentaje Madurez:', f'{round((total_mkt/130)*100)}%'])
+    else:
+        writer.writerow(['Estado:', 'Pendiente por realizar'])
+    writer.writerow([])
+
+    writer.writerow(['--- 4. EVALUACION DE CARGA LABORAL (PUESTOS) ---'])
+    writer.writerow(['Colaborador', 'Cargo', 'Departamento', 'Roles Adicionales', 'Saturacion (%)', 'Equivalencia FTE'])
+    for hr in EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente):
+        writer.writerow([
+            hr.nombre_colaborador, hr.cargo_actual, hr.departamento,
+            hr.roles_adicionales or 'Ninguno',
+            f'{hr.porcentaje_saturacion()}%', hr.personas_equivalentes()
+        ])
+
+    return response
