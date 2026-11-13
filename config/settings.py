@@ -18,7 +18,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'tudominio.com', 'www.tudominio.com',
 
 # Configuración de archivos estáticos (CSS/JS del panel /admin/)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure--(9ws#17@@xnpob8j_orhdl2o)a&i9e%m2bjmd4y*+pniddc-q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com', '*']
 
 
 # Application definition
@@ -56,6 +56,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    # ... el resto de tus middlewares igual ...
+]
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -124,6 +128,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email
