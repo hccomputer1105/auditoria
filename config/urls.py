@@ -23,6 +23,7 @@ from equipos.views import (
     dashboard_rrhh_view,
     descargar_pdf_rrhh,
     descargar_pdf_desempeno,
+    exportar_reporte_pdf,
 )
 
 urlpatterns = [
@@ -42,7 +43,8 @@ urlpatterns = [
     path('eliminar-carga/<int:id>/', eliminar_carga_view, name='eliminar_carga'),
     path('panel-admin/', admin_dashboard_view, name='admin_dashboard'),
     path('panel-admin/empresa/<int:user_id>/', admin_empresa_detalle_view, name='admin_empresa_detalle'),
-    path('panel-admin/exportar/<int:user_id>/', exportar_reporte_csv, name='exportar_reporte_csv'),
+    path('panel-admin/empresa/<int:user_id>/csv/', exportar_reporte_csv, name='exportar_reporte_csv'),
+    path('panel-admin/empresa/<int:user_id>/pdf/', exportar_reporte_pdf, name='exportar_reporte_pdf'),
     path('equipo-dashboard/<int:id>/', dashboard_equipo_view, name='dashboard_equipo'),
     path('carga-laboral/', carga_laboral_view, name='carga_laboral'),
     path('eliminar-carga/<int:id>/', eliminar_carga_view, name='eliminar_carga'),
@@ -55,4 +57,5 @@ urlpatterns = [
     path('desempeno-pdf/<int:id>/', descargar_pdf_desempeno, name='descargar_pdf_desempeno'),
     path('dashboard-rrhh/', dashboard_rrhh_view, name='dashboard_rrhh'),
     path('rrhh-pdf/', descargar_pdf_rrhh, name='descargar_pdf_rrhh'),
+    
 ]

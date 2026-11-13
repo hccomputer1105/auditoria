@@ -1,6 +1,8 @@
 import csv
 import json
 import io
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -8,7 +10,6 @@ from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral
 from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral, EvaluacionDesempeno
 
 
@@ -1074,7 +1075,8 @@ def admin_dashboard_view(request):
     total_eval_ti = EvaluacionISO.objects.count()
     total_eval_mkt = EvaluacionMarketing.objects.count()
     total_eval_hr = EvaluacionCargaLaboral.objects.count()
-    total_evaluaciones_global = total_eval_ti + total_eval_mkt + total_eval_hr
+    total_eval_desemp = EvaluacionDesempeno.objects.count()  # Nueva auditoría integrada
+    total_evaluaciones_global = total_eval_ti + total_eval_mkt + total_eval_hr + total_eval_desemp
 
     empresas_data = []
     nombres_empresas = []
@@ -1088,6 +1090,7 @@ def admin_dashboard_view(request):
         tiene_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).exists()
         tiene_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).exists()
         hr_count = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).count()
+        desemp_count = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).count()  # Nuevo conteo
 
         empresas_data.append({
             'user_id': cliente.id,
@@ -1099,6 +1102,7 @@ def admin_dashboard_view(request):
             'tiene_ti': tiene_ti,
             'tiene_mkt': tiene_mkt,
             'hr_count': hr_count,
+            'desemp_count': desemp_count,
         })
         
         nombres_empresas.append(nombre_emp)
@@ -1111,6 +1115,7 @@ def admin_dashboard_view(request):
         'total_eval_ti': total_eval_ti,
         'total_eval_mkt': total_eval_mkt,
         'total_eval_hr': total_eval_hr,
+        'total_eval_desemp': total_eval_desemp,
         'empresas_data': empresas_data,
         'nombres_empresas': json.dumps(nombres_empresas),
         'cantidades_equipos': json.dumps(cantidades_equipos),
@@ -1129,6 +1134,7 @@ def admin_empresa_detalle_view(request, user_id):
     eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     evals_hr = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+    evals_desemp = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
 
     puntaje_ti = 0
     if eval_ti:
@@ -1149,6 +1155,7 @@ def admin_empresa_detalle_view(request, user_id):
         'eval_mkt': eval_mkt,
         'puntaje_mkt': puntaje_mkt,
         'evals_hr': evals_hr,
+        'evals_desemp': evals_desemp,  # Enviado al detalle para mostrarlo
     }
     return render(request, 'equipos/admin_empresa_detalle.html', context)
 
@@ -1170,10 +1177,10 @@ def exportar_reporte_csv(request, user_id):
     writer.writerow([])
 
     writer.writerow(['--- 1. INVENTARIO DE EQUIPOS TI ---'])
-    writer.writerow(['Equipo', 'Tipo', 'Usuario Asignado', 'Departamento', 'Estatus', 'Sistema Operativo', 'Antivirus', 'Lic. Windows', 'Lic. Office'])
+    writer.writerow(['Equipo', 'Tipo', 'Usuario Asignado', 'Grupo/Dominio', 'Estatus', 'Sistema Operativo', 'Antivirus', 'Lic. Windows', 'Lic. Office'])
     for eq in Computadora.objects.filter(usuario_empresa=cliente):
         writer.writerow([
-            eq.nombre_equipo, eq.tipo_equipo, eq.usuario_asignado, eq.departamento,
+            eq.nombre_equipo, eq.tipo_equipo, eq.usuario_asignado, getattr(eq, 'grupo_dominio', ''),
             eq.estatus, eq.sistema_operativo,
             'Si' if eq.tiene_antivirus else 'No',
             'Si' if eq.licencia_windows else 'No',
@@ -1182,7 +1189,7 @@ def exportar_reporte_csv(request, user_id):
     writer.writerow([])
 
     writer.writerow(['--- 2. AUDITORIA MULTINORMA TI (BASE 42 PTS) ---'])
-    eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).first()
+    eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     if eval_ti:
         campos_ti = [f'p{d}_{q}' for d, max_q in [(1,3),(2,4),(3,3),(4,4),(5,4),(6,3)] for q in range(1, max_q+1)]
         total_ti = sum(getattr(eval_ti, c, 0) for c in campos_ti)
@@ -1192,7 +1199,7 @@ def exportar_reporte_csv(request, user_id):
     writer.writerow([])
 
     writer.writerow(['--- 3. AUDITORIA MARKETING Y SMARKETING (BASE 130 PTS) ---'])
-    eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).first()
+    eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     if eval_mkt:
         campos_mkt = [f'm1_{i}' for i in range(1, 12)] + [f'm2_{i}' for i in range(1, 16)]
         total_mkt = sum(getattr(eval_mkt, c, 1) for c in campos_mkt)
@@ -1209,5 +1216,155 @@ def exportar_reporte_csv(request, user_id):
             hr.roles_adicionales or 'Ninguno',
             f'{hr.porcentaje_saturacion()}%', hr.personas_equivalentes()
         ])
+    writer.writerow([])
 
+    writer.writerow(['--- 5. EVALUACION DE DESEMPENO (ISO 30414 / 10667) ---'])
+    writer.writerow(['Colaborador', 'Cargo', 'Departamento', 'Perspectiva', 'Puntaje Total (75)', 'Desempeno (%)', 'Nivel Baremo'])
+    for des in EvaluacionDesempeno.objects.filter(usuario_empresa=cliente):
+        baremo = des.diagnostico_baremo()
+        writer.writerow([
+            des.nombre_colaborador, des.cargo, des.departamento, des.perspectiva,
+            f'{des.puntaje_total()} / 75', f'{des.porcentaje_desempeno()}%', baremo['nivel']
+        ])
+
+    return response
+
+
+@login_required(login_url='/cuentas/login/')
+@user_passes_test(es_administrador, login_url='/')
+def exportar_reporte_pdf(request, user_id):
+    cliente = get_object_or_404(User, id=user_id)
+    perfil = Perfil.objects.filter(usuario=cliente).first()
+    nombre_empresa = perfil.nombre_empresa if perfil else cliente.username
+
+    equipos = Computadora.objects.filter(usuario_empresa=cliente)
+    eval_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
+    eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
+    evals_hr = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+    evals_desemp = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    # Encabezado corporativo
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 85, ancho, 85, fill=True, stroke=False)
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(45, alto - 42, "REPORTE EJECUTIVO CONSOLIDADO POR EMPRESA")
+    p.setFont("Helvetica", 10)
+    p.drawString(45, alto - 64, f"Empresa: {nombre_empresa}  |  Usuario: {cliente.username}  |  Contacto: {cliente.email or 'Sin correo'}")
+
+    y = alto - 115
+
+    def verificar_salto(espacio=40):
+        nonlocal y
+        if y < espacio:
+            p.showPage()
+            y = alto - 50
+
+    # 1. Inventario TI
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, f"1. Inventario de Activos TI ({equipos.count()} equipos registrados)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if equipos.exists():
+        for eq in equipos:
+            verificar_salto()
+            av = "AV: Sí" if eq.tiene_antivirus else "AV: No"
+            p.drawString(55, y, f"• {eq.nombre_equipo} ({eq.tipo_equipo}) - Usuario: {eq.usuario_asignado or 'N/A'} | Estatus: {eq.estatus} | {av}")
+            y -= 15
+    else:
+        p.drawString(55, y, "• Sin equipos registrados.")
+        y -= 15
+
+    # 2. Auditoría TI (ISO)
+    y -= 12
+    verificar_salto(60)
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "2. Auditoría Multinorma TI (ISO 27001 / 20000 / 22301)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if eval_ti:
+        campos_ti = [f'p{d}_{q}' for d, max_q in [(1,3),(2,4),(3,3),(4,4),(5,4),(6,3)] for q in range(1, max_q+1)]
+        total_ti = sum(getattr(eval_ti, c, 0) for c in campos_ti)
+        p.drawString(55, y, f"• Puntaje Obtenido: {total_ti} / 42 pts  |  Índice de Madurez y Seguridad: {round((total_ti/42)*100)}%")
+    else:
+        p.drawString(55, y, "• Evaluación pendiente por realizar.")
+    y -= 15
+
+    # 3. Auditoría Marketing
+    y -= 12
+    verificar_salto(60)
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "3. Auditoría de Marketing y Smarketing")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if eval_mkt:
+        campos_mkt = [f'm1_{i}' for i in range(1, 12)] + [f'm2_{i}' for i in range(1, 16)]
+        total_mkt = sum(getattr(eval_mkt, c, 1) for c in campos_mkt)
+        p.drawString(55, y, f"• Puntaje Obtenido: {total_mkt} / 130 pts  |  Madurez Comercial: {round((total_mkt/130)*100)}%")
+    else:
+        p.drawString(55, y, "• Evaluación pendiente por realizar.")
+    y -= 15
+
+    # 4. Carga Laboral
+    y -= 12
+    verificar_salto(60)
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, f"4. Evaluación de Carga Laboral ({evals_hr.count()} registros)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if evals_hr.exists():
+        for hr in evals_hr:
+            verificar_salto()
+            p.drawString(55, y, f"• {hr.nombre_colaborador} ({hr.cargo_actual} - {hr.departamento}) | Saturación: {hr.porcentaje_saturacion()}% | FTE: {hr.personas_equivalentes()}")
+            y -= 15
+    else:
+        p.drawString(55, y, "• Sin evaluaciones de carga laboral registradas.")
+        y -= 15
+
+    # 5. Evaluación de Desempeño
+    y -= 12
+    verificar_salto(60)
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, f"5. Evaluación del Desempeño ISO 30414/10667 ({evals_desemp.count()} registros)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if evals_desemp.exists():
+        for des in evals_desemp:
+            verificar_salto()
+            baremo = des.diagnostico_baremo()
+            p.drawString(55, y, f"• {des.nombre_colaborador} ({des.cargo}) | Puntaje: {des.puntaje_total()}/75 ({des.porcentaje_desempeno()}%) | Nivel: {baremo['nivel']}")
+            y -= 15
+    else:
+        p.drawString(55, y, "• Sin evaluaciones de desempeño registradas.")
+        y -= 15
+
+    p.setFont("Helvetica", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Reporte generado desde el Centro de Control Multi-Empresa (Master Admin).")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Reporte_Ejecutivo_{cliente.username}.pdf"'
     return response
