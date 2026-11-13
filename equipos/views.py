@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral
+from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral, EvaluacionDesempeno
 
 
 @login_required(login_url='/cuentas/login/')
@@ -668,6 +669,165 @@ def eliminar_carga_view(request, id):
     registro = get_object_or_404(EvaluacionCargaLaboral, id=id, usuario_empresa=request.user)
     registro.delete()
     return redirect('carga_laboral')
+
+@login_required(login_url='/cuentas/login/')
+def evaluacion_desempeno_view(request):
+    if request.method == 'POST':
+        nueva_eval = EvaluacionDesempeno(
+            usuario_empresa=request.user,
+            nombre_colaborador=request.POST.get('nombre_colaborador'),
+            cargo=request.POST.get('cargo'),
+            departamento=request.POST.get('departamento'),
+            perspectiva=request.POST.get('perspectiva', 'Evaluación del Líder'),
+            consentimiento_informado=request.POST.get('consentimiento_informado') == 'on',
+            # Bloque I
+            b1_1=int(request.POST.get('b1_1', 3)),
+            b1_2=int(request.POST.get('b1_2', 3)),
+            b1_3=int(request.POST.get('b1_3', 3)),
+            b1_4=int(request.POST.get('b1_4', 3)),
+            b1_5=int(request.POST.get('b1_5', 3)),
+            # Bloque II
+            b2_1=int(request.POST.get('b2_1', 3)),
+            b2_2=int(request.POST.get('b2_2', 3)),
+            b2_3=int(request.POST.get('b2_3', 3)),
+            b2_4=int(request.POST.get('b2_4', 3)),
+            b2_5=int(request.POST.get('b2_5', 3)),
+            # Bloque III
+            b3_1=int(request.POST.get('b3_1', 3)),
+            b3_2=int(request.POST.get('b3_2', 3)),
+            b3_3=int(request.POST.get('b3_3', 3)),
+            b3_4=int(request.POST.get('b3_4', 3)),
+            b3_5=int(request.POST.get('b3_5', 3)),
+            observaciones_feedback=request.POST.get('observaciones_feedback', ''),
+        )
+        nueva_eval.save()
+        return redirect('evaluacion_desempeno')
+
+    evaluaciones = EvaluacionDesempeno.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
+
+    total_evaluados = evaluaciones.count()
+    sobresalientes = sum(1 for e in evaluaciones if e.puntaje_total() >= 63)
+    competentes = sum(1 for e in evaluaciones if 50 <= e.puntaje_total() <= 62)
+    en_desarrollo = sum(1 for e in evaluaciones if 36 <= e.puntaje_total() <= 49)
+    criticos = sum(1 for e in evaluaciones if e.puntaje_total() <= 35)
+
+    context = {
+        'evaluaciones': evaluaciones,
+        'total_evaluados': total_evaluados,
+        'sobresalientes': sobresalientes,
+        'competentes': competentes,
+        'en_desarrollo': en_desarrollo,
+        'criticos': criticos,
+    }
+    return render(request, 'equipos/evaluacion_desempeno.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+def eliminar_desempeno_view(request, id):
+    registro = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    registro.delete()
+    return redirect('evaluacion_desempeno')
+
+@login_required(login_url='/cuentas/login/')
+def editar_desempeno_view(request, id):
+    evaluacion = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+
+    if request.method == 'POST':
+        evaluacion.nombre_colaborador = request.POST.get('nombre_colaborador')
+        evaluacion.cargo = request.POST.get('cargo')
+        evaluacion.departamento = request.POST.get('departamento')
+        evaluacion.perspectiva = request.POST.get('perspectiva', 'Evaluación del Líder')
+        evaluacion.consentimiento_informado = request.POST.get('consentimiento_informado') == 'on'
+
+        for bloque in range(1, 4):
+            for item in range(1, 6):
+                campo = f'b{bloque}_{item}'
+                setattr(evaluacion, campo, int(request.POST.get(campo, 3)))
+
+        evaluacion.observaciones_feedback = request.POST.get('observaciones_feedback', '')
+        evaluacion.save()
+        return redirect('evaluacion_desempeno')
+
+    return render(request, 'equipos/editar_desempeno.html', {'ev': evaluacion})
+
+
+@login_required(login_url='/cuentas/login/')
+def dashboard_persona_desempeno_view(request, id):
+    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    baremo = ev.diagnostico_baremo()
+
+    bloques_valores = [ev.puntaje_bloque_1(), ev.puntaje_bloque_2(), ev.puntaje_bloque_3()]
+    items_valores = [
+        ev.b1_1, ev.b1_2, ev.b1_3, ev.b1_4, ev.b1_5,
+        ev.b2_1, ev.b2_2, ev.b2_3, ev.b2_4, ev.b2_5,
+        ev.b3_1, ev.b3_2, ev.b3_3, ev.b3_4, ev.b3_5
+    ]
+
+    context = {
+        'ev': ev,
+        'baremo': baremo,
+        'bloques_json': json.dumps(bloques_valores),
+        'items_json': json.dumps(items_valores),
+    }
+    return render(request, 'equipos/dashboard_persona_desempeno.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+def dashboard_rrhh_view(request):
+    cargas = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
+    desempenos = EvaluacionDesempeno.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
+
+    # Unificar lista única de nombres de colaboradores registrados en cualquiera de los dos módulos
+    nombres_set = set()
+    for c in cargas:
+        if c.nombre_colaborador:
+            nombres_set.add(c.nombre_colaborador.strip())
+    for d in desempenos:
+        if d.nombre_colaborador:
+            nombres_set.add(d.nombre_colaborador.strip())
+
+    lista_empleados = sorted(list(nombres_set))
+    empleado_seleccionado = request.GET.get('empleado', '')
+
+    if not empleado_seleccionado and lista_empleados:
+        empleado_seleccionado = lista_empleados[0]
+
+    # Buscar registros del empleado seleccionado (coincidencia exacta sin importar mayúsculas/minúsculas)
+    carga_emp = cargas.filter(nombre_colaborador__iexact=empleado_seleccionado).order_by('-fecha_evaluacion').first() if empleado_seleccionado else None
+    desemp_emp = desempenos.filter(nombre_colaborador__iexact=empleado_seleccionado).order_by('-fecha_evaluacion').first() if empleado_seleccionado else None
+
+    # Preparar datos JSON para gráficos con valores visibles
+    carga_bloques = [0, 0, 0, 0]
+    saturacion_val = 0
+    if carga_emp:
+        # Cada bloque de carga tiene 3 reactivos (c1_1..c1_3, etc.)
+        b1_c = getattr(carga_emp, 'c1_1', 0) + getattr(carga_emp, 'c1_2', 0) + getattr(carga_emp, 'c1_3', 0)
+        b2_c = getattr(carga_emp, 'c2_1', 0) + getattr(carga_emp, 'c2_2', 0) + getattr(carga_emp, 'c2_3', 0)
+        b3_c = getattr(carga_emp, 'c3_1', 0) + getattr(carga_emp, 'c3_2', 0) + getattr(carga_emp, 'c3_3', 0)
+        b4_c = getattr(carga_emp, 'c4_1', 0) + getattr(carga_emp, 'c4_2', 0) + getattr(carga_emp, 'c4_3', 0)
+        carga_bloques = [b1_c, b2_c, b3_c, b4_c]
+        saturacion_val = carga_emp.porcentaje_saturacion()
+
+    desemp_bloques = [0, 0, 0]
+    desemp_porcentaje = 0
+    baremo_emp = None
+    if desemp_emp:
+        desemp_bloques = [desemp_emp.puntaje_bloque_1(), desemp_emp.puntaje_bloque_2(), desemp_emp.puntaje_bloque_3()]
+        desemp_porcentaje = desemp_emp.porcentaje_desempeno()
+        baremo_emp = desemp_emp.diagnostico_baremo()
+
+    context = {
+        'lista_empleados': lista_empleados,
+        'empleado_seleccionado': empleado_seleccionado,
+        'carga_emp': carga_emp,
+        'desemp_emp': desemp_emp,
+        'baremo_emp': baremo_emp,
+        'saturacion_val': saturacion_val,
+        'desemp_porcentaje': desemp_porcentaje,
+        'carga_bloques_json': json.dumps(carga_bloques),
+        'desemp_bloques_json': json.dumps(desemp_bloques),
+    }
+    return render(request, 'equipos/dashboard_rrhh.html', context)
 
 
 def es_administrador(user):

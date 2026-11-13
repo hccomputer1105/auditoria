@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluación del Desempeño - ISO 30414 / 10667</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #1e293b; }
+        .nav-link { color: #cbd5e1; margin-bottom: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #334155; border-radius: 5px; }
+        .item-row:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- MENÚ LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="text-center mt-2 mb-4 fw-bold text-info"><i class="bi bi-shield-lock"></i> AuditTech</h4>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
+                    <li class="nav-item"><a href="{% url 'inventario' %}" class="nav-link"><i class="bi bi-pc-display me-2"></i> Inventario Hardware</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion' %}" class="nav-link"><i class="bi bi-clipboard-check me-2"></i> Evaluación TI</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'dashboard_marketing' %}" class="nav-link"><i class="bi bi-graph-up-arrow me-2 text-info"></i> Dashboard Marketing</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion_marketing' %}" class="nav-link"><i class="bi bi-megaphone me-2 text-warning"></i> Evaluación Marketing</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'carga_laboral' %}" class="nav-link"><i class="bi bi-person-workspace me-2 text-success"></i> Carga Laboral</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion_desempeno' %}" class="nav-link active"><i class="bi bi-people-fill me-2 text-info"></i> Evaluación Desempeño</a></li>
+                     <li class="nav-item"><a href="{% url 'dashboard_rrhh' %}" class="nav-link"><i class="bi bi-pie-chart-fill me-2 text-warning"></i> Dashboard RRHH</a></li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-primary fw-bold">
+                        <i class="bi bi-person-check-fill"></i> Evaluación del Desempeño Centrado en la Persona (ISO 30414 / 10667)
+                    </span>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3 text-secondary"><i class="bi bi-building"></i> Empresa: <strong>{{ user.username }}</strong></span>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</button>
+                        </form>
+                    </div>
+                </nav>
+
+                <!-- KPIs DE RESUMEN DEL EQUIPO -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm border-start border-primary border-4">
+                            <div class="card-body">
+                                <small class="text-muted fw-bold text-uppercase">Evaluaciones Realizadas</small>
+                                <h2 class="fw-bold mb-0">{{ total_evaluados }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm border-start border-success border-4">
+                            <div class="card-body">
+                                <small class="text-success fw-bold text-uppercase">Sobresalientes (63-75 pts)</small>
+                                <h2 class="fw-bold text-success mb-0">{{ sobresalientes }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm border-start border-info border-4">
+                            <div class="card-body">
+                                <small class="text-info fw-bold text-uppercase">Competentes (50-62 pts)</small>
+                                <h2 class="fw-bold text-info mb-0">{{ competentes }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm border-start border-danger border-4">
+                            <div class="card-body">
+                                <small class="text-danger fw-bold text-uppercase">Desarrollo / Crítico (&lt; 50)</small>
+                                <h2 class="fw-bold text-danger mb-0">{{ en_desarrollo|add:criticos }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GUÍA DE ESCALA CONDUCTUAL BARS (ISO 10667) -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-sliders2"></i> Escala Conductual BARS (1 a 5 Puntos) - Lineamientos ISO 10667</span>
+                        <span class="badge bg-info text-dark">Base Máxima: 75 Puntos</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-2 text-center small">
+                            <div class="col">
+                                <div class="p-2 border rounded bg-danger bg-opacity-10 h-100">
+                                    <strong class="text-danger d-block">1 - No desarrollado</strong>
+                                    <span class="text-muted">Rara vez muestra la conducta; genera roces y requiere corrección inmediata.</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 border rounded bg-warning bg-opacity-10 h-100">
+                                    <strong class="text-warning text-dark d-block">2 - En desarrollo</strong>
+                                    <span class="text-muted">Demuestra la conducta de manera intermitente o solo bajo solicitud formal.</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 border rounded bg-info bg-opacity-10 h-100">
+                                    <strong class="text-info text-dark d-block">3 - Competente</strong>
+                                    <span class="text-muted">Cumple con la conducta esperada de forma regular y confiable en su día a día.</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 border rounded bg-primary bg-opacity-10 h-100">
+                                    <strong class="text-primary d-block">4 - Avanzado</strong>
+                                    <span class="text-muted">Exhibe la conducta proactivamente, facilitando el clima laboral bajo presión.</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 border rounded bg-success bg-opacity-10 h-100">
+                                    <strong class="text-success d-block">5 - Referente / Ejemplar</strong>
+                                    <span class="text-muted">Modela el comportamiento e inspira a otros como referente ético y relacional.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO DE EVALUACIÓN -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-primary text-white fw-bold">
+                        <i class="bi bi-clipboard2-pulse"></i> Aplicar Cuestionario de Desempeño Humano
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            <!-- Datos del Colaborador y Perspectiva 360 -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Nombre del Colaborador *</label>
+                                    <input type="text" name="nombre_colaborador" class="form-control" placeholder="Ej. María Gómez" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Cargo *</label>
+                                    <input type="text" name="cargo" class="form-control" placeholder="Ej. Analista Contable" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Departamento *</label>
+                                    <input type="text" name="departamento" class="form-control" placeholder="Ej. Administración" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Perspectiva (ISO 10667)</label>
+                                    <select name="perspectiva" class="form-select">
+                                        <option value="Evaluación del Líder">Evaluación del Líder</option>
+                                        <option value="Autoevaluación">Autoevaluación</option>
+                                        <option value="Evaluación de Pares">Evaluación de Pares (360°)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Garantía Ética ISO 10667 -->
+                            <div class="alert alert-secondary py-2 mb-4">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" name="consentimiento_informado" id="consentimiento" checked required>
+                                    <label class="form-check-label small" for="consentimiento">
+                                        <strong>Garantía Ética ISO 10667:</strong> Confirmo que el evaluado fue informado previamente del propósito formativo de este instrumento y recibirá retroalimentación constructiva confidencial.
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- BLOQUE I: HABILIDADES BLANDAS -->
+                            <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                Bloque I: Habilidades Blandas (Soft Skills Personales)
+                            </h5>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 75%;">Competencia y Conducta Observable</th>
+                                            <th class="text-center">Calificación BARS (1 - 5)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="item-row">
+                                            <td><strong>1. Escucha Activa y Receptividad:</strong> Escucha con atención y apertura los puntos de vista de otros sin interrumpir, mostrando disposición a entender antes de responder.</td>
+                                            <td>
+                                                <select name="b1_1" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>2. Comunicación Asertiva y Respetuosa:</strong> Expresa ideas, acuerdos o desacuerdos con claridad, firmeza y cortesía, sin utilizar lenguaje agresivo o pasivo.</td>
+                                            <td>
+                                                <select name="b1_2" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>3. Autocontrol y Manejo Emocional:</strong> Mantiene una postura constructiva, madura y equilibrada ante situaciones de tensión, imprevistos o discrepancias laborales.</td>
+                                            <td>
+                                                <select name="b1_3" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>4. Adaptabilidad y Flexibilidad:</strong> Demuestra disposición para ajustarse de manera positiva a cambios organizacionales, nuevas dinámicas o diferentes estilos de trabajo.</td>
+                                            <td>
+                                                <select name="b1_4" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>5. Responsabilidad e Integridad Personal:</strong> Asume la autoría de sus compromisos, reconoce errores de manera transparente y actúa bajo principios éticos (ISO 30414).</td>
+                                            <td>
+                                                <select name="b1_5" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- BLOQUE II: TRATO AL PERSONAL Y RELACIONES HUMANAS -->
+                            <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                Bloque II: Trato al Personal y Relaciones Humanas
+                            </h5>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 75%;">Competencia y Conducta Observable</th>
+                                            <th class="text-center">Calificación BARS (1 - 5)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="item-row">
+                                            <td><strong>1. Empatía y Sensibilidad Interpersonal:</strong> Muestra consideración y comprensión hacia las necesidades, estados de ánimo y tiempos de los demás integrantes.</td>
+                                            <td>
+                                                <select name="b2_1" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>2. Cordialidad y Cortesía Diaria:</strong> Fomenta un ambiente de calidez mediante el saludo, la amabilidad, la buena disposición y el trato digno hacia cualquier persona.</td>
+                                            <td>
+                                                <select name="b2_2" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>3. Inclusión y Respeto a la Diversidad:</strong> Trata a todos con equidad e imparcialidad, valorando las diferencias de origen, género, edad o perspectiva sin sesgos (ISO 30414).</td>
+                                            <td>
+                                                <select name="b2_3" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>4. Disponibilidad para Ayudar:</strong> Ofrece su apoyo o atención de manera accesible y desinteresada cuando un colega requiere orientación o asistencia.</td>
+                                            <td>
+                                                <select name="b2_4" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>5. Apertura a la Retroalimentación:</strong> Recibe las sugerencias y comentarios sobre su conducta con humildad y disposición al aprendizaje personal.</td>
+                                            <td>
+                                                <select name="b2_5" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- BLOQUE III: CONVIVENCIA GRUPAL Y CULTURA DE EQUIPO -->
+                            <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                Bloque III: Convivencia Grupal y Cultura de Equipo (ISO 30414: Clima y Bienestar)
+                            </h5>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 75%;">Competencia y Conducta Observable</th>
+                                            <th class="text-center">Calificación BARS (1 - 5)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="item-row">
+                                            <td><strong>1. Espíritu Colaborativo:</strong> Prioriza el beneficio y la armonía del equipo por encima de intereses individuales, compartiendo información y recursos de forma transparente.</td>
+                                            <td>
+                                                <select name="b3_1" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>2. Resolución Constructiva de Diferencias:</strong> Ante un conflicto o desacuerdo, busca soluciones dialogadas enfocándose en resolver el problema y preservar relaciones.</td>
+                                            <td>
+                                                <select name="b3_2" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>3. Promoción de un Clima Positivo:</strong> Evita rumores, comentarios lesivos o conductas tóxicas, contribuyendo activamente a un entorno de confianza y bienestar psicosocial.</td>
+                                            <td>
+                                                <select name="b3_3" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>4. Reconocimiento y Respaldo:</strong> Valora y celebra los aportes y aciertos de sus pares, reconociendo el esfuerzo conjunto dentro de la organización.</td>
+                                            <td>
+                                                <select name="b3_4" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr class="item-row">
+                                            <td><strong>5. Solidaridad y Sentido de Pertenencia:</strong> Se involucra en las actividades colectivas e iniciativas que fortalecen la cultura y la integración grupal.</td>
+                                            <td>
+                                                <select name="b3_5" class="form-select form-select-sm fw-bold">
+                                                    <option value="1">1 - No desarrollado</option>
+                                                    <option value="2">2 - En desarrollo</option>
+                                                    <option value="3" selected>3 - Competente</option>
+                                                    <option value="4">4 - Avanzado</option>
+                                                    <option value="5">5 - Referente</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Acuerdos de Retroalimentación (ISO 10667) -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Acuerdos y Comentarios de la Sesión de Retroalimentación (Feedback Constructivo)</label>
+                                <textarea name="observaciones_feedback" rows="2" class="form-control" placeholder="Evidencias observadas, fortalezas destacadas y compromisos de crecimiento personal..."></textarea>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary px-4 fw-bold">
+                                    <i class="bi bi-save"></i> Guardar Evaluación de Desempeño
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- RESULTADOS Y BAREMO FINAL DE DESEMPEÑO -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white fw-bold">
+                        <i class="bi bi-award"></i> Historial y Matriz de Resultados de Desempeño (Base 75 pts)
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Colaborador / Cargo</th>
+                                        <th>Perspectiva</th>
+                                        <th class="text-center">Bloques (I / II / III)</th>
+                                        <th class="text-center">Puntaje Total</th>
+                                        <th>Nivel Global (Baremo)</th>
+                                        <th>Acción Recomendada (ISO 10667)</th>
+                                        <th class="text-end">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ev in evaluaciones %}
+                                    {% with baremo=ev.diagnostico_baremo %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ ev.nombre_colaborador }}</strong><br>
+                                            <small class="text-muted">{{ ev.cargo }} ({{ ev.departamento }})</small>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ ev.perspectiva }}</span></td>
+                                        <td class="text-center small">
+                                            {{ ev.puntaje_bloque_1 }}/25 | {{ ev.puntaje_bloque_2 }}/25 | {{ ev.puntaje_bloque_3 }}/25
+                                        </td>
+                                        <td class="text-center">
+                                            <strong class="fs-6">{{ ev.puntaje_total }} / 75</strong><br>
+                                            <small class="text-muted">({{ ev.porcentaje_desempeno }}%)</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ baremo.color }} {% if baremo.color == 'warning' or baremo.color == 'info' %}text-dark{% endif %} p-2">
+                                                {{ baremo.nivel }}
+                                            </span>
+                                        </td>
+                                        <td class="small">{{ baremo.accion }}</td>
+                                        <td class="text-end text-nowrap">
+                                            <a href="{% url 'dashboard_persona_desempeno' ev.id %}" class="btn btn-sm btn-primary me-1" title="Ver Dashboard de la Persona">
+                                                <i class="bi bi-speedometer2"></i> Dashboard
+                                            </a>
+                                            <a href="{% url 'editar_desempeno' ev.id %}" class="btn btn-sm btn-warning text-dark me-1" title="Modificar Evaluación">
+                                                <i class="bi bi-pencil-square"></i> Modificar
+                                            </a>
+                                            <a href="{% url 'eliminar_desempeno' ev.id %}" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="return confirm('¿Eliminar esta evaluación de desempeño?');">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endwith %}
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">Aún no se han registrado evaluaciones de desempeño humano.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

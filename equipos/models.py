@@ -344,3 +344,86 @@ class EvaluacionCargaLaboral(models.Model):
 
     def __str__(self):
         return f"{self.cargo_actual} ({self.nombre_colaborador}) - {self.porcentaje_saturacion()}%"
+
+class EvaluacionDesempeno(models.Model):
+    PERSPECTIVAS = [
+        ('Autoevaluación', 'Autoevaluación'),
+        ('Evaluación del Líder', 'Evaluación del Líder'),
+        ('Evaluación de Pares', 'Evaluación de Pares'),
+    ]
+
+    usuario_empresa = models.ForeignKey(User, on_delete=models.CASCADE)
+    nombre_colaborador = models.CharField(max_length=150)
+    cargo = models.CharField(max_length=100)
+    departamento = models.CharField(max_length=100)
+    perspectiva = models.CharField(max_length=50, choices=PERSPECTIVAS, default='Evaluación del Líder')
+    consentimiento_informado = models.BooleanField(default=True)
+    fecha_evaluacion = models.DateTimeField(auto_now_add=True)
+
+    # Bloque I: Habilidades Blandas (Soft Skills Personales) - Escala BARS 1 a 5
+    b1_1 = models.IntegerField(default=3)  # Escucha Activa y Receptividad
+    b1_2 = models.IntegerField(default=3)  # Comunicación Asertiva y Respetuosa
+    b1_3 = models.IntegerField(default=3)  # Autocontrol y Manejo Emocional
+    b1_4 = models.IntegerField(default=3)  # Adaptabilidad y Flexibilidad
+    b1_5 = models.IntegerField(default=3)  # Responsabilidad e Integridad Personal
+
+    # Bloque II: Trato al Personal y Relaciones Humanas - Escala BARS 1 a 5
+    b2_1 = models.IntegerField(default=3)  # Empatía y Sensibilidad Interpersonal
+    b2_2 = models.IntegerField(default=3)  # Cordialidad y Cortesía Diaria
+    b2_3 = models.IntegerField(default=3)  # Inclusión y Respeto a la Diversidad
+    b2_4 = models.IntegerField(default=3)  # Disponibilidad para Ayudar
+    b2_5 = models.IntegerField(default=3)  # Apertura a la Retroalimentación
+
+    # Bloque III: Convivencia Grupal y Cultura de Equipo - Escala BARS 1 a 5
+    b3_1 = models.IntegerField(default=3)  # Espíritu Colaborativo
+    b3_2 = models.IntegerField(default=3)  # Resolución Constructiva de Diferencias
+    b3_3 = models.IntegerField(default=3)  # Promoción de un Clima Positivo
+    b3_4 = models.IntegerField(default=3)  # Reconocimiento y Respaldo
+    b3_5 = models.IntegerField(default=3)  # Solidaridad y Sentido de Pertenencia
+
+    observaciones_feedback = models.TextField(blank=True, default='')
+
+    def puntaje_bloque_1(self):
+        return self.b1_1 + self.b1_2 + self.b1_3 + self.b1_4 + self.b1_5
+
+    def puntaje_bloque_2(self):
+        return self.b2_1 + self.b2_2 + self.b2_3 + self.b2_4 + self.b2_5
+
+    def puntaje_bloque_3(self):
+        return self.b3_1 + self.b3_2 + self.b3_3 + self.b3_4 + self.b3_5
+
+    def puntaje_total(self):
+        return self.puntaje_bloque_1() + self.puntaje_bloque_2() + self.puntaje_bloque_3()
+
+    def porcentaje_desempeno(self):
+        return round((self.puntaje_total() / 75) * 100, 1)
+
+    def diagnostico_baremo(self):
+        pts = self.puntaje_total()
+        if pts <= 35:
+            return {
+                'nivel': 'Crítico / Insatisfactorio',
+                'color': 'danger',
+                'accion': 'Muestra dificultades significativas en el trato interpersonal y convivencia. Requiere un plan de mejora urgente y seguimiento directo en pautas de conducta.'
+            }
+        elif pts <= 49:
+            return {
+                'nivel': 'Básico / En Desarrollo',
+                'color': 'warning',
+                'accion': 'Mantiene un comportamiento aceptable pero inconsistente. Requiere formación en habilidades relacionales y comunicación asertiva.'
+            }
+        elif pts <= 62:
+            return {
+                'nivel': 'Competente / Adecuado',
+                'color': 'info',
+                'accion': 'Persona equilibrada que convive sanamente, trata con respeto a su entorno y colabora regularmente con el equipo.'
+            }
+        else:
+            return {
+                'nivel': 'Sobresaliente / Modelo Cultural',
+                'color': 'success',
+                'accion': 'Referente positivo dentro de la empresa; impulsa el bienestar colectivo y refleja plenamente los valores de la cultura organizacional.'
+            }
+
+    def __str__(self):
+        return f"{self.nombre_colaborador} ({self.puntaje_total()}/75 pts)"

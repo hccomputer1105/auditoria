@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Modificar Evaluación - {{ ev.nombre_colaborador }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #1e293b; }
+        .nav-link { color: #cbd5e1; margin-bottom: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #334155; border-radius: 5px; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- MENÚ LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="text-center mt-2 mb-4 fw-bold text-info"><i class="bi bi-shield-lock"></i> AuditTech</h4>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
+                    <li class="nav-item"><a href="{% url 'inventario' %}" class="nav-link"><i class="bi bi-pc-display me-2"></i> Inventario Hardware</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion' %}" class="nav-link"><i class="bi bi-clipboard-check me-2"></i> Evaluación TI</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'dashboard_marketing' %}" class="nav-link"><i class="bi bi-graph-up-arrow me-2 text-info"></i> Dashboard Marketing</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion_marketing' %}" class="nav-link"><i class="bi bi-megaphone me-2 text-warning"></i> Evaluación Marketing</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'dashboard_rrhh' %}" class="nav-link"><i class="bi bi-pie-chart-fill me-2 text-warning"></i> Dashboard RRHH</a></li>
+                    <li class="nav-item"><a href="{% url 'carga_laboral' %}" class="nav-link"><i class="bi bi-person-workspace me-2 text-success"></i> Carga Laboral</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion_desempeno' %}" class="nav-link active"><i class="bi bi-people-fill me-2 text-info"></i> Evaluación Desempeño</a></li>
+                </ul>
+            </div>
+
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-primary fw-bold">
+                        <i class="bi bi-pencil-square"></i> Modificar Evaluación de Desempeño: {{ ev.nombre_colaborador }}
+                    </span>
+                    <a href="{% url 'evaluacion_desempeno' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancelar y Volver
+                    </a>
+                </nav>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-warning text-dark fw-bold">
+                        Actualizar Datos y Calificaciones Conductuales (BARS 1 - 5)
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Nombre del Colaborador *</label>
+                                    <input type="text" name="nombre_colaborador" class="form-control" value="{{ ev.nombre_colaborador }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Cargo *</label>
+                                    <input type="text" name="cargo" class="form-control" value="{{ ev.cargo }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Departamento *</label>
+                                    <input type="text" name="departamento" class="form-control" value="{{ ev.departamento }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Perspectiva (ISO 10667)</label>
+                                    <select name="perspectiva" class="form-select">
+                                        <option value="Evaluación del Líder" {% if ev.perspectiva == 'Evaluación del Líder' %}selected{% endif %}>Evaluación del Líder</option>
+                                        <option value="Autoevaluación" {% if ev.perspectiva == 'Autoevaluación' %}selected{% endif %}>Autoevaluación</option>
+                                        <option value="Evaluación de Pares" {% if ev.perspectiva == 'Evaluación de Pares' %}selected{% endif %}>Evaluación de Pares (360°)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- BLOQUE I -->
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Bloque I: Habilidades Blandas (Soft Skills Personales)</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">1. Escucha Activa y Receptividad</label>
+                                    <select name="b1_1" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b1_1 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b1_1 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b1_1 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b1_1 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b1_1 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">2. Comunicación Asertiva y Respetuosa</label>
+                                    <select name="b1_2" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b1_2 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b1_2 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b1_2 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b1_2 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b1_2 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">3. Autocontrol y Manejo Emocional</label>
+                                    <select name="b1_3" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b1_3 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b1_3 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b1_3 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b1_3 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b1_3 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">4. Adaptabilidad y Flexibilidad</label>
+                                    <select name="b1_4" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b1_4 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b1_4 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b1_4 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b1_4 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b1_4 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">5. Responsabilidad e Integridad Personal</label>
+                                    <select name="b1_5" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b1_5 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b1_5 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b1_5 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b1_5 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b1_5 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- BLOQUE II -->
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Bloque II: Trato al Personal y Relaciones Humanas</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">1. Empatía y Sensibilidad Interpersonal</label>
+                                    <select name="b2_1" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b2_1 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b2_1 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b2_1 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b2_1 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b2_1 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">2. Cordialidad y Cortesía Diaria</label>
+                                    <select name="b2_2" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b2_2 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b2_2 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b2_2 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b2_2 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b2_2 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">3. Inclusión y Respeto a la Diversidad</label>
+                                    <select name="b2_3" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b2_3 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b2_3 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b2_3 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b2_3 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b2_3 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">4. Disponibilidad para Ayudar</label>
+                                    <select name="b2_4" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b2_4 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b2_4 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b2_4 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b2_4 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b2_4 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">5. Apertura a la Retroalimentación</label>
+                                    <select name="b2_5" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b2_5 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b2_5 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b2_5 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b2_5 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b2_5 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- BLOQUE III -->
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">Bloque III: Convivencia Grupal y Cultura de Equipo</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">1. Espíritu Colaborativo</label>
+                                    <select name="b3_1" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b3_1 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b3_1 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b3_1 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b3_1 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b3_1 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">2. Resolución Constructiva de Diferencias</label>
+                                    <select name="b3_2" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b3_2 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b3_2 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b3_2 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b3_2 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b3_2 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">3. Promoción de un Clima Positivo</label>
+                                    <select name="b3_3" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b3_3 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b3_3 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b3_3 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b3_3 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b3_3 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">4. Reconocimiento y Respaldo</label>
+                                    <select name="b3_4" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b3_4 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b3_4 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b3_4 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b3_4 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b3_4 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">5. Solidaridad y Sentido de Pertenencia</label>
+                                    <select name="b3_5" class="form-select form-select-sm">
+                                        <option value="1" {% if ev.b3_5 == 1 %}selected{% endif %}>1 - No desarrollado</option>
+                                        <option value="2" {% if ev.b3_5 == 2 %}selected{% endif %}>2 - En desarrollo</option>
+                                        <option value="3" {% if ev.b3_5 == 3 %}selected{% endif %}>3 - Competente</option>
+                                        <option value="4" {% if ev.b3_5 == 4 %}selected{% endif %}>4 - Avanzado</option>
+                                        <option value="5" {% if ev.b3_5 == 5 %}selected{% endif %}>5 - Referente</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Acuerdos y Comentarios de Retroalimentación</label>
+                                <textarea name="observaciones_feedback" rows="2" class="form-control">{{ ev.observaciones_feedback }}</textarea>
+                            </div>
+
+                            <div class="text-end">
+                                <a href="{% url 'evaluacion_desempeno' %}" class="btn btn-secondary me-2">Cancelar</a>
+                                <button type="submit" class="btn btn-warning fw-bold px-4">
+                                    <i class="bi bi-check-circle"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
