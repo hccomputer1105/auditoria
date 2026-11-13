@@ -4,16 +4,18 @@ from equipos.views import (
     dashboard_view, 
     inventario_view, 
     editar_equipo, 
-    eliminar_equipo, 
+    eliminar_equipo,
+    descargar_pdf_equipo,  # <-- NUEVA VISTA PDF
     evaluacion_view, 
     evaluacion_marketing_view,
     dashboard_marketing_view,
     carga_laboral_view,
     eliminar_carga_view,
-    # NUEVAS VISTAS DE ADMINISTRADOR GLOBAL:
     admin_dashboard_view,
     admin_empresa_detalle_view,
-    exportar_reporte_csv
+    exportar_reporte_csv,
+    dashboard_equipo_view,
+    evaluacion_view,
 )
 
 urlpatterns = [
@@ -23,14 +25,14 @@ urlpatterns = [
     path('inventario/', inventario_view, name='inventario'),
     path('editar/<int:id>/', editar_equipo, name='editar_equipo'),
     path('eliminar/<int:id>/', eliminar_equipo, name='eliminar_equipo'),
+    path('equipo-pdf/<int:id>/', descargar_pdf_equipo, name='descargar_pdf_equipo'),  # <-- NUEVA RUTA
     path('evaluacion/', evaluacion_view, name='evaluacion'),
     path('dashboard-marketing/', dashboard_marketing_view, name='dashboard_marketing'),
     path('evaluacion-marketing/', evaluacion_marketing_view, name='evaluacion_marketing'),
     path('carga-laboral/', carga_laboral_view, name='carga_laboral'),
     path('eliminar-carga/<int:id>/', eliminar_carga_view, name='eliminar_carga'),
-    
-    # RUTAS DEL PANEL MAESTRO DE ADMINISTRADOR:
     path('panel-admin/', admin_dashboard_view, name='admin_dashboard'),
     path('panel-admin/empresa/<int:user_id>/', admin_empresa_detalle_view, name='admin_empresa_detalle'),
     path('panel-admin/exportar/<int:user_id>/', exportar_reporte_csv, name='exportar_reporte_csv'),
+    path('equipo-dashboard/<int:id>/', dashboard_equipo_view, name='dashboard_equipo'),
 ]

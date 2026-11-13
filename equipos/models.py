@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import date
 
 # 1. TABLA DE EMPRESAS (PERFIL)
 class Perfil(models.Model):
@@ -16,6 +17,15 @@ class Computadora(models.Model):
     nombre_equipo = models.CharField("Nombre del Equipo", max_length=100)
     usuario_asignado = models.CharField("Usuario Asignado", max_length=100, default="Sin asignar")
     departamento = models.CharField("Departamento", max_length=100, default="General")
+    serial = models.CharField(max_length=100, blank=True, default='')
+    grupo_dominio = models.CharField(max_length=100, blank=True, default='')
+    direccion_ip = models.CharField(max_length=45, blank=True, default='')
+    direccion_mac = models.CharField(max_length=50, blank=True, default='')
+    sistema_operativo = models.CharField(max_length=100, blank=True, default='')
+    impresoras_instaladas = models.CharField(max_length=255, blank=True, default='')
+    discos_compartidos = models.CharField(max_length=100, blank=True, default='')  # Guardará ej: "C:, D:"
+    version_firewall = models.CharField(max_length=100, blank=True, default='')
+    ultimo_mantenimiento = models.DateField(null=True, blank=True)
 
     TIPO_CHOICES = [('Computadora', 'Computadora'), ('Monitor', 'Monitor'), ('Teclado', 'Teclado'), ('Mouse', 'Mouse')]
     tipo_equipo = models.CharField("Tipo", max_length=50, choices=TIPO_CHOICES, default='Computadora')
@@ -44,9 +54,77 @@ class Computadora(models.Model):
     licencia_erp = models.BooleanField("Licencia de Sistema Administrativo", default=False)
     ERP_CHOICES = [('SAP', 'SAP'), ('Galac', 'Galac'), ('Profit', 'Profit Plus')]
     tipo_erp = models.CharField("Tipo de Sistema Administrativo", max_length=50, choices=ERP_CHOICES, blank=True, null=True)
+    # --- NUEVOS CAMPOS DE DIAGNÓSTICO TÉCNICO POR EQUIPO ---
+    firewall_activo = models.BooleanField(default=False)
+    actualizaciones_so = models.BooleanField(default=False)
+    espacio_disco_ok = models.BooleanField(default=True)
+    rendimiento_optimo = models.BooleanField(default=True)
+    observaciones_diagnostico = models.TextField(blank=True, default='')
+    def evaluar_diagnostico(self):
+        """
+        Evalúa la salud y seguridad individual del equipo y retorna:
+        (estado_texto, clase_badge_bootstrap, puntaje_salud, lista_hallazgos, lista_mejoras)
+        """
+        hallazgos_riesgo = []
+        oportunidades_mejora = []
+        puntos = 100
 
-    def __str__(self):
-        return f"{self.tipo_equipo}: {self.nombre_equipo} - {self.estatus}"
+        # 1. Estado físico base (aplica a todo hardware)
+        if self.estatus == 'Malo':
+            hallazgos_riesgo.append("Equipo reportado en estado físico Malo/Dañado.")
+            puntos -= 40
+        elif self.estatus == 'En reparación':
+            oportunidades_mejora.append("Equipo actualmente en proceso de reparación.")
+            puntos -= 20
+
+        # 2. Validación de Último Mantenimiento (MÁXIMO 3 MESES / 90 DÍAS para todo hardware)
+        if self.ultimo_mantenimiento:
+            dias_sin_mtto = (date.today() - self.ultimo_mantenimiento).days
+            if dias_sin_mtto > 90:
+                hallazgos_riesgo.append(
+                    f"Mantenimiento preventivo vencido: han transcurrido {dias_sin_mtto} días (excede el límite de 3 meses)."
+                )
+                puntos -= 30
+        else:
+            hallazgos_riesgo.append("Sin fecha de último mantenimiento registrada (riesgo operativo por falta de control).")
+            puntos -= 25
+
+        # 3. Evaluaciones específicas de Computadora / Servidor
+        if self.tipo_equipo in ['Computadora', 'Laptop', 'Servidor']:
+            if not self.tiene_antivirus:
+                hallazgos_riesgo.append("Sin protección Antivirus activa (alta exposición a malware).")
+                puntos -= 25
+            if not self.firewall_activo:
+                hallazgos_riesgo.append("Firewall de Windows/Sistema desactivado.")
+                puntos -= 20
+            if not self.licencia_windows:
+                hallazgos_riesgo.append("Sistema Operativo sin licencia original verificada.")
+                puntos -= 15
+            if self.prog_office and not self.licencia_office:
+                oportunidades_mejora.append("Paquete Office instalado sin licencia original.")
+                puntos -= 10
+            if not self.actualizaciones_so:
+                oportunidades_mejora.append("Parches y actualizaciones de seguridad del Sistema Operativo pendientes.")
+                puntos -= 10
+            if not self.espacio_disco_ok:
+                oportunidades_mejora.append("Almacenamiento con poco espacio libre (< 15% disponible).")
+                puntos -= 10
+            if not self.rendimiento_optimo:
+                oportunidades_mejora.append("Rendimiento lento detectado (evaluar ampliación de RAM o cambio a SSD).")
+                puntos -= 10
+            if not self.prog_pdf or not self.prog_winrar:
+                oportunidades_mejora.append("Faltan utilidades ofimáticas estándar (Lector PDF o compresor de archivos).")
+                puntos -= 5
+
+        puntos = max(0, puntos)
+
+        # Clasificación final del diagnóstico
+        if len(hallazgos_riesgo) > 0 or puntos < 60:
+            return ("En Riesgo", "danger", puntos, hallazgos_riesgo, oportunidades_mejora)
+        elif len(oportunidades_mejora) > 0 or puntos < 90:
+            return ("Requiere Mejoras", "warning", puntos, hallazgos_riesgo, oportunidades_mejora)
+        else:
+            return ("Operativo Óptimo", "success", puntos, hallazgos_riesgo, oportunidades_mejora)
 
 
 # 3. TABLA DE EVALUACIÓN MULTINORMA (38 PUNTOS MÁXIMOS) + INFRAESTRUCTURA

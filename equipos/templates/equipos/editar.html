@@ -2,113 +2,270 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Editar Equipo</title>
+    <title>Modificar Dispositivo - {{ equipo.nombre_equipo }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { min-height: 100vh; background-color: #1e293b; }
+        .nav-link { color: #cbd5e1; margin-bottom: 5px; }
+        .nav-link:hover, .nav-link.active { color: #ffffff; background-color: #334155; border-radius: 5px; }
+    </style>
 </head>
-<body class="bg-light p-5">
-    <div class="container" style="max-width: 800px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-secondary"><i class="bi bi-pencil-square"></i> Editar Equipo</h3>
-            <a href="/inventario/" class="btn btn-outline-secondary">Volver al Inventario</a>
-        </div>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- MENÚ LATERAL -->
+            <div class="col-md-2 sidebar p-3 text-white">
+                <h4 class="text-center mt-2 mb-4 fw-bold text-info"><i class="bi bi-shield-lock"></i> AuditTech</h4>
+                <hr class="border-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
+                    <li class="nav-item"><a href="{% url 'inventario' %}" class="nav-link active"><i class="bi bi-pc-display me-2"></i> Inventario Hardware</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion' %}" class="nav-link"><i class="bi bi-clipboard-check me-2"></i> Evaluación TI</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'dashboard_marketing' %}" class="nav-link"><i class="bi bi-graph-up-arrow me-2 text-info"></i> Dashboard Marketing</a></li>
+                    <li class="nav-item"><a href="{% url 'evaluacion_marketing' %}" class="nav-link"><i class="bi bi-megaphone me-2 text-warning"></i> Evaluación Marketing</a></li>
+                    <hr class="border-secondary my-2">
+                    <li class="nav-item"><a href="{% url 'carga_laboral' %}" class="nav-link"><i class="bi bi-person-workspace me-2 text-success"></i> Carga Laboral</a></li>
+                </ul>
+            </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Clasificación de Hardware</label>
-                            <select class="form-select bg-light" name="tipo_equipo">
-                                <option value="Computadora" {% if equipo.tipo_equipo == 'Computadora' %}selected{% endif %}>Computadora</option>
-                                <option value="Monitor" {% if equipo.tipo_equipo == 'Monitor' %}selected{% endif %}>Monitor</option>
-                                <option value="Teclado" {% if equipo.tipo_equipo == 'Teclado' %}selected{% endif %}>Teclado</option>
-                                <option value="Mouse" {% if equipo.tipo_equipo == 'Mouse' %}selected{% endif %}>Mouse</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Estatus Físico</label>
-                            <select class="form-select bg-light" name="estatus">
-                                <option value="Bueno" {% if equipo.estatus == 'Bueno' %}selected{% endif %}>Óptimo / Bueno</option>
-                                <option value="En reparación" {% if equipo.estatus == 'En reparación' %}selected{% endif %}>En reparación</option>
-                                <option value="Malo" {% if equipo.estatus == 'Malo' %}selected{% endif %}>Dañado</option>
-                            </select>
-                        </div>
-                    </div>
+            <!-- ÁREA CENTRAL -->
+            <div class="col-md-10 p-4">
+                
+                <nav class="navbar navbar-light bg-white rounded shadow-sm mb-4 p-3 d-flex justify-content-between">
+                    <span class="navbar-brand mb-0 h4 text-primary fw-bold">
+                        <i class="bi bi-pencil-square"></i> Modificar Dispositivo: {{ equipo.nombre_equipo }}
+                    </span>
+                    <a href="{% url 'inventario' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancelar y Volver
+                    </a>
+                </nav>
 
-                    <h5 class="fw-bold mt-4 mb-3 text-primary">Software Instalado</h5>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" name="tiene_antivirus" {% if equipo.tiene_antivirus %}checked{% endif %}>
-                                <label class="form-check-label">Antivirus Activo</label>
-                            </div>
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" name="prog_anydesk" {% if equipo.prog_anydesk %}checked{% endif %}>
-                                <label class="form-check-label">AnyDesk</label>
-                            </div>
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" name="prog_winrar" {% if equipo.prog_winrar %}checked{% endif %}>
-                                <label class="form-check-label">WinRAR / ZIP</label>
-                            </div>
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" name="prog_pdf" {% if equipo.prog_pdf %}checked{% endif %}>
-                                <label class="form-check-label">Lector PDF</label>
-                            </div>
-                        </div>
-                        <div class="col-md-6 bg-light p-3 rounded">
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" name="prog_office" {% if equipo.prog_office %}checked{% endif %}>
-                                <label class="form-check-label fw-bold">Microsoft Office</label>
-                            </div>
-                            <input type="text" class="form-control" name="version_office" value="{{ equipo.version_office }}" placeholder="Versión">
-                        </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-warning text-dark fw-bold">
+                        <i class="bi bi-sliders"></i> Actualizar Ficha Técnica y Diagnóstico
                     </div>
-<hr>
-                    <h5 class="fw-bold mt-4 mb-3 text-success"><i class="bi bi-key"></i> Gestión de Licencias</h5>
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkLicOffice" name="licencia_office" {% if equipo.licencia_office %}checked{% endif %}>
-                                <label class="form-check-label" for="chkLicOffice">Licencia de Office</label>
+                    <div class="card-body p-4">
+                        <form method="POST">
+                            {% csrf_token %}
+                            
+                            <!-- FILA 1: CLASIFICACIÓN, ESTATUS Y SERIAL -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Clasificación de Hardware</label>
+                                    <select name="tipo_equipo" id="selectTipoHardware" class="form-select" required>
+                                        <option value="Computadora" {% if equipo.tipo_equipo == 'Computadora' %}selected{% endif %}>Computadora</option>
+                                        <option value="Servidor" {% if equipo.tipo_equipo == 'Servidor' %}selected{% endif %}>Servidor</option>
+                                        <option value="Router" {% if equipo.tipo_equipo == 'Router' %}selected{% endif %}>Router</option>
+                                        <option value="Módem" {% if equipo.tipo_equipo == 'Módem' %}selected{% endif %}>Módem</option>
+                                        <option value="DVR" {% if equipo.tipo_equipo == 'DVR' %}selected{% endif %}>DVR</option>
+                                        <option value="Biométrico" {% if equipo.tipo_equipo == 'Biométrico' %}selected{% endif %}>Biométrico</option>
+                                        <option value="Cámaras" {% if equipo.tipo_equipo == 'Cámaras' %}selected{% endif %}>Cámaras</option>
+                                        <option value="Firewall" {% if equipo.tipo_equipo == 'Firewall' %}selected{% endif %}>Firewall</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Estatus Operativo</label>
+                                    <select name="estatus" class="form-select" required>
+                                        <option value="Bueno" {% if equipo.estatus == 'Bueno' %}selected{% endif %}>Bueno (Operativo)</option>
+                                        <option value="En reparación" {% if equipo.estatus == 'En reparación' %}selected{% endif %}>En reparación</option>
+                                        <option value="Malo" {% if equipo.estatus == 'Malo' %}selected{% endif %}>Malo / Dañado</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Serial del Equipo</label>
+                                    <input type="text" name="serial" class="form-control" value="{{ equipo.serial }}">
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkLicWindows" name="licencia_windows" onchange="toggleWindows()" {% if equipo.licencia_windows %}checked{% endif %}>
-                                <label class="form-check-label" for="chkLicWindows">Licencia de Windows</label>
+
+                            <!-- FILA 2: USUARIO ASIGNADO, NOMBRE DEL PC Y GRUPO/DOMINIO -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Usuario Asignado</label>
+                                    <input type="text" name="usuario_asignado" class="form-control" value="{{ equipo.usuario_asignado }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Nombre del PC / Dispositivo</label>
+                                    <input type="text" name="nombre_equipo" class="form-control" value="{{ equipo.nombre_equipo }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Grupo de Trabajo / Dominio</label>
+                                    <input type="text" name="grupo_dominio" class="form-control" value="{{ equipo.grupo_dominio }}">
+                                </div>
                             </div>
-                            <div id="divWindows" style="display: {% if equipo.licencia_windows %}block{% else %}none{% endif %};" class="mt-2 p-2 bg-light border rounded">
-                                <input type="text" class="form-control" name="version_windows" value="{{ equipo.version_windows|default:'' }}" placeholder="Versión">
+
+                            <!-- FILA 3: DIRECCIÓN IP Y DIRECCIÓN MAC -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Dirección IP</label>
+                                    <input type="text" name="direccion_ip" class="form-control" value="{{ equipo.direccion_ip }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Dirección MAC</label>
+                                    <input type="text" name="direccion_mac" class="form-control" value="{{ equipo.direccion_mac }}">
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-check form-switch fs-5 mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkLicErp" name="licencia_erp" onchange="toggleErp()" {% if equipo.licencia_erp %}checked{% endif %}>
-                                <label class="form-check-label" for="chkLicErp">Sistema Administrativo</label>
+
+                            <!-- FILA 4: ÚLTIMO MANTENIMIENTO Y VERSIÓN DE FIREWALL -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-danger"><i class="bi bi-calendar-check"></i> Última Fecha de Mantenimiento *</label>
+                                    <input type="date" name="ultimo_mantenimiento" class="form-control" value="{{ equipo.ultimo_mantenimiento|date:'Y-m-d' }}" required>
+                                    <small class="text-muted">Máximo permitido: 3 meses (90 días). Si excede este plazo pasará a <strong>En Riesgo</strong>.</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Versión / Modelo del Firewall</label>
+                                    <input type="text" name="version_firewall" class="form-control" value="{{ equipo.version_firewall }}">
+                                </div>
                             </div>
-                            <div id="divErp" style="display: {% if equipo.licencia_erp %}block{% else %}none{% endif %};" class="mt-2 p-2 bg-light border rounded">
-                                <select class="form-select" name="tipo_erp">
-                                    <option value="" {% if not equipo.tipo_erp %}selected{% endif %}>Seleccione...</option>
-                                    <option value="SAP" {% if equipo.tipo_erp == 'SAP' %}selected{% endif %}>SAP</option>
-                                    <option value="Galac" {% if equipo.tipo_erp == 'Galac' %}selected{% endif %}>Galac</option>
-                                    <option value="Profit" {% if equipo.tipo_erp == 'Profit' %}selected{% endif %}>Profit Plus</option>
-                                </select>
+
+                            <!-- BLOQUE CONDICIONAL: SOLO VISIBLE PARA COMPUTADORA Y SERVIDOR -->
+                            <div id="bloqueSoftwareLicencias">
+                                <hr>
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-pc"></i> Configuración de Sistema, Impresoras y Discos</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Sistema Operativo</label>
+                                        <input type="text" name="sistema_operativo" class="form-control" value="{{ equipo.sistema_operativo }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Impresoras Instaladas</label>
+                                        <input type="text" name="impresoras_instaladas" class="form-control" value="{{ equipo.impresoras_instaladas }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold d-block">Discos Compartidos (Selección Múltiple)</label>
+                                        <div class="btn-group mt-1" role="group">
+                                            <input type="checkbox" class="btn-check" name="discos_compartidos" value="C:" id="discoC" {% if 'C:' in discos_actuales %}checked{% endif %}>
+                                            <label class="btn btn-outline-primary" for="discoC">C:</label>
+
+                                            <input type="checkbox" class="btn-check" name="discos_compartidos" value="D:" id="discoD" {% if 'D:' in discos_actuales %}checked{% endif %}>
+                                            <label class="btn btn-outline-primary" for="discoD">D:</label>
+
+                                            <input type="checkbox" class="btn-check" name="discos_compartidos" value="E:" id="discoE" {% if 'E:' in discos_actuales %}checked{% endif %}>
+                                            <label class="btn btn-outline-primary" for="discoE">E:</label>
+
+                                            <input type="checkbox" class="btn-check" name="discos_compartidos" value="F:" id="discoF" {% if 'F:' in discos_actuales %}checked{% endif %}>
+                                            <label class="btn btn-outline-primary" for="discoF">F:</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr>
+                                <div class="row">
+                                    <!-- Software Instalado -->
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-window-stack"></i> Software Instalado</h6>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="tiene_antivirus" id="av" {% if equipo.tiene_antivirus %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold text-success" for="av">Antivirus Activo</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="prog_anydesk" id="anydesk" {% if equipo.prog_anydesk %}checked{% endif %}>
+                                            <label class="form-check-label" for="anydesk">AnyDesk</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="prog_winrar" id="winrar" {% if equipo.prog_winrar %}checked{% endif %}>
+                                            <label class="form-check-label" for="winrar">WinRAR</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="prog_pdf" id="pdf" {% if equipo.prog_pdf %}checked{% endif %}>
+                                            <label class="form-check-label" for="pdf">Lector PDF</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="prog_office" id="office" {% if equipo.prog_office %}checked{% endif %}>
+                                            <label class="form-check-label" for="office">Paquete Office</label>
+                                        </div>
+                                        <input type="text" name="version_office" class="form-control form-control-sm mt-1" value="{{ equipo.version_office }}" placeholder="Versión de Office">
+                                    </div>
+
+                                    <!-- Gestión de Licencias -->
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-key"></i> Gestión de Licencias</h6>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="licencia_windows" id="lic_win" {% if equipo.licencia_windows %}checked{% endif %}>
+                                            <label class="form-check-label" for="lic_win">Licencia de Windows Original</label>
+                                        </div>
+                                        <input type="text" name="version_windows" class="form-control form-control-sm mb-3" value="{{ equipo.version_windows }}" placeholder="Versión Licencia Windows">
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="licencia_office" id="lic_off" {% if equipo.licencia_office %}checked{% endif %}>
+                                            <label class="form-check-label" for="lic_off">Licencia de Office Original</label>
+                                        </div>
+
+                                        <div class="form-check mb-2 mt-3">
+                                            <input class="form-check-input" type="checkbox" name="licencia_erp" id="lic_erp" {% if equipo.licencia_erp %}checked{% endif %}>
+                                            <label class="form-check-label" for="lic_erp">Sistema ERP Licenciado</label>
+                                        </div>
+                                        <input type="text" name="tipo_erp" class="form-control form-control-sm" value="{{ equipo.tipo_erp }}" placeholder="Nombre del ERP">
+                                    </div>
+                                </div>
+
+                                <hr>
+                                <!-- SUBSECCIÓN: DIAGNÓSTICO TÉCNICO DEL EQUIPO -->
+                                <h6 class="fw-bold text-danger mb-3"><i class="bi bi-heart-pulse-fill"></i> Diagnóstico de Seguridad y Rendimiento del Equipo</h6>
+                                <div class="row bg-light p-3 rounded border">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="firewall_activo" id="fw_win" {% if equipo.firewall_activo %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold text-primary" for="fw_win">Firewall de Windows Activo</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="actualizaciones_so" id="act_so" {% if equipo.actualizaciones_so %}checked{% endif %}>
+                                            <label class="form-check-label" for="act_so">Actualizaciones SO al día</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="espacio_disco_ok" id="disco_ok" {% if equipo.espacio_disco_ok %}checked{% endif %}>
+                                            <label class="form-check-label" for="disco_ok">Espacio en Disco Suficiente</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="rendimiento_optimo" id="rend_ok" {% if equipo.rendimiento_optimo %}checked{% endif %}>
+                                            <label class="form-check-label" for="rend_ok">Rendimiento Fluido / Óptimo</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 mt-3">
+                                        <label class="form-label small fw-bold text-secondary">Observaciones o Hallazgos Técnicos (Opcional)</label>
+                                        <input type="text" name="observaciones_diagnostico" class="form-control form-control-sm" value="{{ equipo.observaciones_diagnostico }}">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+
+                            <div class="text-end mt-4">
+                                <a href="{% url 'inventario' %}" class="btn btn-secondary me-2">Cancelar</a>
+                                <button type="submit" class="btn btn-warning fw-bold px-4">
+                                    <i class="bi bi-check-circle"></i> Guardar Modificaciones
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    <script>
-                        function toggleWindows() { document.getElementById('divWindows').style.display = document.getElementById('chkLicWindows').checked ? 'block' : 'none'; }
-                        function toggleErp() { document.getElementById('divErp').style.display = document.getElementById('chkLicErp').checked ? 'block' : 'none'; }
-                    </script>
-                    <div class="mt-4 text-end">
-                        <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Guardar Cambios</button>
-                    </div>
-                </form>
+                </div>
+
             </div>
         </div>
     </div>
+
+    <script>
+        const selectHardware = document.getElementById('selectTipoHardware');
+        const bloqueSoftware = document.getElementById('bloqueSoftwareLicencias');
+
+        function actualizarVisibilidadSoftware() {
+            const valor = selectHardware.value;
+            if (valor === 'Computadora' || valor === 'Servidor') {
+                bloqueSoftware.style.display = 'block';
+            } else {
+                bloqueSoftware.style.display = 'none';
+            }
+        }
+
+        selectHardware.addEventListener('change', actualizarVisibilidadSoftware);
+        actualizarVisibilidadSoftware();
+    </script>
 </body>
 </html>

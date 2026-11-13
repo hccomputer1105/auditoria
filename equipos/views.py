@@ -1,5 +1,9 @@
 import csv
 import json
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -128,31 +132,202 @@ def dashboard_view(request):
 @login_required(login_url='/cuentas/login/')
 def inventario_view(request):
     if request.method == 'POST':
+        tipo = request.POST.get('tipo_equipo')
+        es_computo_o_servidor = tipo in ['Computadora', 'Laptop', 'Servidor']
+
+        discos_lista = request.POST.getlist('discos_compartidos')
+        discos_texto = ", ".join(discos_lista) if es_computo_o_servidor else ""
+        nombre_pc = request.POST.get('nombre_equipo', '').strip() or f"{tipo} Registrado"
+        fecha_mtto = request.POST.get('ultimo_mantenimiento') or None
+
         nuevo_equipo = Computadora(
             usuario_empresa=request.user,
-            tipo_equipo=request.POST.get('tipo_equipo'),
+            tipo_equipo=tipo,
             estatus=request.POST.get('estatus'),
-            tiene_antivirus=request.POST.get('tiene_antivirus') == 'on',
-            prog_anydesk=request.POST.get('prog_anydesk') == 'on',
-            prog_winrar=request.POST.get('prog_winrar') == 'on',
-            prog_pdf=request.POST.get('prog_pdf') == 'on',
-            prog_office=request.POST.get('prog_office') == 'on',
-            version_office=request.POST.get('version_office', ''),
-            licencia_office=request.POST.get('licencia_office') == 'on',
-            licencia_windows=request.POST.get('licencia_windows') == 'on',
-            version_windows=request.POST.get('version_windows', ''),
-            licencia_erp=request.POST.get('licencia_erp') == 'on',
-            tipo_erp=request.POST.get('tipo_erp', ''),
-            nombre_equipo=str(request.POST.get('tipo_equipo')) + " Registrado",
-            sistema_operativo="No definido",
-            ultima_actualizacion="2024-01-01",
-            ultimo_mantenimiento="2024-01-01"
+            ultimo_mantenimiento=fecha_mtto,
+            version_firewall=request.POST.get('version_firewall', ''),
+            # Identificación y Red
+            usuario_asignado=request.POST.get('usuario_asignado', ''),
+            nombre_equipo=nombre_pc,
+            serial=request.POST.get('serial', ''),
+            grupo_dominio=request.POST.get('grupo_dominio', ''),
+            direccion_ip=request.POST.get('direccion_ip', ''),
+            direccion_mac=request.POST.get('direccion_mac', ''),
+            sistema_operativo=request.POST.get('sistema_operativo', '') if es_computo_o_servidor else 'Firmware / Embebido',
+            impresoras_instaladas=request.POST.get('impresoras_instaladas', '') if es_computo_o_servidor else '',
+            discos_compartidos=discos_texto,
+            # Software y licencias
+            tiene_antivirus=(request.POST.get('tiene_antivirus') == 'on') if es_computo_o_servidor else False,
+            prog_anydesk=(request.POST.get('prog_anydesk') == 'on') if es_computo_o_servidor else False,
+            prog_winrar=(request.POST.get('prog_winrar') == 'on') if es_computo_o_servidor else False,
+            prog_pdf=(request.POST.get('prog_pdf') == 'on') if es_computo_o_servidor else False,
+            prog_office=(request.POST.get('prog_office') == 'on') if es_computo_o_servidor else False,
+            version_office=request.POST.get('version_office', '') if es_computo_o_servidor else '',
+            licencia_office=(request.POST.get('licencia_office') == 'on') if es_computo_o_servidor else False,
+            licencia_windows=(request.POST.get('licencia_windows') == 'on') if es_computo_o_servidor else False,
+            version_windows=request.POST.get('version_windows', '') if es_computo_o_servidor else '',
+            licencia_erp=(request.POST.get('licencia_erp') == 'on') if es_computo_o_servidor else False,
+            tipo_erp=request.POST.get('tipo_erp', '') if es_computo_o_servidor else '',
+            # Diagnóstico técnico
+            firewall_activo=(request.POST.get('firewall_activo') == 'on') if es_computo_o_servidor else False,
+            actualizaciones_so=(request.POST.get('actualizaciones_so') == 'on') if es_computo_o_servidor else False,
+            espacio_disco_ok=(request.POST.get('espacio_disco_ok') == 'on') if es_computo_o_servidor else True,
+            rendimiento_optimo=(request.POST.get('rendimiento_optimo') == 'on') if es_computo_o_servidor else True,
+            observaciones_diagnostico=request.POST.get('observaciones_diagnostico', ''),
+            ultima_actualizacion="2026-01-01"
         )
         nuevo_equipo.save()
         return redirect('inventario')
         
     mis_equipos = Computadora.objects.filter(usuario_empresa=request.user).order_by('-fecha_auditoria')
     return render(request, 'equipos/inventario.html', {'mis_equipos': mis_equipos})
+
+@login_required(login_url='/cuentas/login/')
+def dashboard_equipo_view(request, id):
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
+    estado, color, puntaje, riesgos, mejoras = equipo.evaluar_diagnostico()
+
+    context = {
+        'equipo': equipo,
+        'estado': estado,
+        'color': color,
+        'puntaje': puntaje,
+        'riesgo_porcentaje': 100 - puntaje,
+        'riesgos': riesgos,
+        'mejoras': mejoras,
+    }
+    return render(request, 'equipos/dashboard_equipo.html', context)
+
+
+@login_required(login_url='/cuentas/login/')
+def descargar_pdf_equipo(request, id):
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
+    perfil = Perfil.objects.filter(usuario=request.user).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+    estado_diag, _, puntaje_salud, riesgos, mejoras = equipo.evaluar_diagnostico()
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    # Encabezado corporativo
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
+    
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(45, alto - 45, "FICHA TÉCNICA Y DIAGNÓSTICO DE HARDWARE")
+    p.setFont("Helvetica", 11)
+    p.drawString(45, alto - 68, f"Empresa: {empresa_nombre}  |  ID: #{equipo.id}  |  Diagnóstico: {estado_diag.upper()} ({puntaje_salud}%)")
+
+    # Sección 1: Identificación y Red
+    y = alto - 125
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, "1. Identificación, Usuario y Configuración de Red")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 25
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    p.drawString(55, y, f"Clasificación de Hardware:   {equipo.tipo_equipo}")
+    p.drawString(330, y, f"Estatus Físico:      {equipo.estatus}")
+    y -= 20
+    p.drawString(55, y, f"Nombre del PC / Host:        {equipo.nombre_equipo or 'N/A'}")
+    p.drawString(330, y, f"Serial:              {equipo.serial or 'N/A'}")
+    y -= 20
+    p.drawString(55, y, f"Usuario Asignado:            {equipo.usuario_asignado or 'Sin asignar'}")
+    p.drawString(330, y, f"Grupo / Dominio:     {equipo.grupo_dominio or 'N/A'}")
+    y -= 20
+    p.drawString(55, y, f"Dirección IP:                {equipo.direccion_ip or 'N/A'}")
+    p.drawString(330, y, f"Dirección MAC:       {equipo.direccion_mac or 'N/A'}")
+    y -= 20
+    mtto_str = equipo.ultimo_mantenimiento.strftime("%d/%m/%Y") if equipo.ultimo_mantenimiento else "Sin registro"
+    p.drawString(55, y, f"Último Mantenimiento:        {mtto_str}")
+    p.drawString(330, y, f"Versión Firewall:    {equipo.version_firewall or 'N/A'}")
+
+    # Sección 2: Condicional para Computadora / Servidor
+    if equipo.tipo_equipo in ['Computadora', 'Laptop', 'Servidor']:
+        y -= 38
+        p.setFillColor(colors.HexColor("#1e293b"))
+        p.setFont("Helvetica-Bold", 13)
+        p.drawString(45, y, "2. Sistema Operativo, Periféricos y Recursos Compartidos")
+        p.line(45, y - 5, ancho - 45, y - 5)
+
+        y -= 24
+        p.setFont("Helvetica", 10)
+        p.setFillColor(colors.black)
+        p.drawString(55, y, f"Sistema Operativo:           {equipo.sistema_operativo or 'No especificado'}")
+        y -= 18
+        p.drawString(55, y, f"Discos Compartidos:          {equipo.discos_compartidos or 'Ninguno'}")
+        y -= 18
+        p.drawString(55, y, f"Impresoras Instaladas:       {equipo.impresoras_instaladas or 'Ninguna'}")
+
+        y -= 38
+        p.setFillColor(colors.HexColor("#1e293b"))
+        p.setFont("Helvetica-Bold", 13)
+        p.drawString(45, y, "3. Software Instalado, Seguridad y Licencias")
+        p.line(45, y - 5, ancho - 45, y - 5)
+
+        y -= 24
+        p.setFont("Helvetica", 10)
+        p.setFillColor(colors.black)
+        p.drawString(55, y, f"• Antivirus Activo:       {'Sí (Protegido)' if equipo.tiene_antivirus else 'No (Vulnerable)'}")
+        p.drawString(330, y, f"• Firewall Windows:  {'Activo' if equipo.firewall_activo else 'Desactivado'}")
+        y -= 18
+        p.drawString(55, y, f"• Actualizaciones SO:     {'Al día' if equipo.actualizaciones_so else 'Pendientes'}")
+        p.drawString(330, y, f"• Licencia Windows:  {'Original' if equipo.licencia_windows else 'Sin Licencia'} {f'({equipo.version_windows})' if equipo.version_windows else ''}")
+        y -= 18
+        p.drawString(55, y, f"• Microsoft Office:       {'Sí' if equipo.prog_office else 'No'} {f'({equipo.version_office})' if equipo.version_office else ''}")
+        p.drawString(330, y, f"• Licencia Office:   {'Original' if equipo.licencia_office else 'Sin Licencia'}")
+        y -= 18
+        p.drawString(55, y, f"• AnyDesk / WinRAR / PDF: {'Sí' if equipo.prog_anydesk else 'No'} / {'Sí' if equipo.prog_winrar else 'No'} / {'Sí' if equipo.prog_pdf else 'No'}")
+        p.drawString(330, y, f"• Sistema ERP:       {'Sí' if equipo.licencia_erp else 'No'} {f'({equipo.tipo_erp})' if equipo.tipo_erp else ''}")
+
+    # Sección 4: Diagnóstico Técnico Automático
+    y -= 38
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(45, y, f"4. Resultado del Diagnóstico: {estado_diag} (Índice de Salud: {puntaje_salud}/100)")
+    p.line(45, y - 5, ancho - 45, y - 5)
+
+    y -= 22
+    p.setFont("Helvetica", 10)
+    if riesgos:
+        p.setFillColor(colors.HexColor("#b91c1c"))
+        for r in riesgos:
+            p.drawString(55, y, f"[RIESGO] {r}")
+            y -= 16
+    if mejoras:
+        p.setFillColor(colors.HexColor("#b45309"))
+        for m in mejoras:
+            p.drawString(55, y, f"[MEJORA] {m}")
+            y -= 16
+    if not riesgos and not mejoras:
+        p.setFillColor(colors.HexColor("#15803d"))
+        p.drawString(55, y, "[ÓPTIMO] El equipo cumple con todos los parámetros operativos y de seguridad evaluados.")
+        y -= 16
+
+    if equipo.observaciones_diagnostico:
+        y -= 10
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(55, y, "Notas Técnicas del Auditor:")
+        y -= 15
+        p.setFont("Helvetica", 9)
+        p.drawString(55, y, equipo.observaciones_diagnostico[:110])
+
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Documento generado automáticamente por la Plataforma de Consultoría y Auditoría Empresarial.")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Diagnostico_{equipo.tipo_equipo}_{equipo.nombre_equipo}.pdf"'
+    return response
 
 
 @login_required(login_url='/cuentas/login/')
@@ -167,23 +342,52 @@ def editar_equipo(request, id):
     equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
     
     if request.method == 'POST':
-        equipo.tipo_equipo = request.POST.get('tipo_equipo')
+        tipo = request.POST.get('tipo_equipo')
+        es_computo_o_servidor = tipo in ['Computadora', 'Laptop', 'Servidor']
+
+        discos_lista = request.POST.getlist('discos_compartidos')
+        discos_texto = ", ".join(discos_lista) if es_computo_o_servidor else ""
+
+        equipo.tipo_equipo = tipo
         equipo.estatus = request.POST.get('estatus')
-        equipo.tiene_antivirus = request.POST.get('tiene_antivirus') == 'on'
-        equipo.prog_anydesk = request.POST.get('prog_anydesk') == 'on'
-        equipo.prog_winrar = request.POST.get('prog_winrar') == 'on'
-        equipo.prog_pdf = request.POST.get('prog_pdf') == 'on'
-        equipo.prog_office = request.POST.get('prog_office') == 'on'
-        equipo.version_office = request.POST.get('version_office', '')
-        equipo.licencia_office = request.POST.get('licencia_office') == 'on'
-        equipo.licencia_windows = request.POST.get('licencia_windows') == 'on'
-        equipo.version_windows = request.POST.get('version_windows', '')
-        equipo.licencia_erp = request.POST.get('licencia_erp') == 'on'
-        equipo.tipo_erp = request.POST.get('tipo_erp', '')
+        equipo.ultimo_mantenimiento = request.POST.get('ultimo_mantenimiento') or None
+        equipo.version_firewall = request.POST.get('version_firewall', '')
+        
+        equipo.usuario_asignado = request.POST.get('usuario_asignado', '')
+        equipo.nombre_equipo = request.POST.get('nombre_equipo', '').strip() or f"{tipo} Registrado"
+        equipo.serial = request.POST.get('serial', '')
+        equipo.grupo_dominio = request.POST.get('grupo_dominio', '')
+        equipo.direccion_ip = request.POST.get('direccion_ip', '')
+        equipo.direccion_mac = request.POST.get('direccion_mac', '')
+        
+        equipo.sistema_operativo = request.POST.get('sistema_operativo', '') if es_computo_o_servidor else 'Firmware / Embebido'
+        equipo.impresoras_instaladas = request.POST.get('impresoras_instaladas', '') if es_computo_o_servidor else ''
+        equipo.discos_compartidos = discos_texto
+
+        equipo.tiene_antivirus = (request.POST.get('tiene_antivirus') == 'on') if es_computo_o_servidor else False
+        equipo.prog_anydesk = (request.POST.get('prog_anydesk') == 'on') if es_computo_o_servidor else False
+        equipo.prog_winrar = (request.POST.get('prog_winrar') == 'on') if es_computo_o_servidor else False
+        equipo.prog_pdf = (request.POST.get('prog_pdf') == 'on') if es_computo_o_servidor else False
+        equipo.prog_office = (request.POST.get('prog_office') == 'on') if es_computo_o_servidor else False
+        equipo.version_office = request.POST.get('version_office', '') if es_computo_o_servidor else ''
+        equipo.licencia_office = (request.POST.get('licencia_office') == 'on') if es_computo_o_servidor else False
+        equipo.licencia_windows = (request.POST.get('licencia_windows') == 'on') if es_computo_o_servidor else False
+        equipo.version_windows = request.POST.get('version_windows', '') if es_computo_o_servidor else ''
+        equipo.licencia_erp = (request.POST.get('licencia_erp') == 'on') if es_computo_o_servidor else False
+        equipo.tipo_erp = request.POST.get('tipo_erp', '') if es_computo_o_servidor else ''
+
+        equipo.firewall_activo = (request.POST.get('firewall_activo') == 'on') if es_computo_o_servidor else False
+        equipo.actualizaciones_so = (request.POST.get('actualizaciones_so') == 'on') if es_computo_o_servidor else False
+        equipo.espacio_disco_ok = (request.POST.get('espacio_disco_ok') == 'on') if es_computo_o_servidor else True
+        equipo.rendimiento_optimo = (request.POST.get('rendimiento_optimo') == 'on') if es_computo_o_servidor else True
+        equipo.observaciones_diagnostico = request.POST.get('observaciones_diagnostico', '')
+
         equipo.save()
         return redirect('inventario')
-        
-    return render(request, 'equipos/editar.html', {'equipo': equipo})
+
+    # Convertir discos guardados en lista para pre-marcar los botones en el formulario de edición
+    discos_actuales = [d.strip() for d in equipo.discos_compartidos.split(',')] if equipo.discos_compartidos else []
+    return render(request, 'equipos/editar.html', {'equipo': equipo, 'discos_actuales': discos_actuales})
 
 
 @login_required(login_url='/cuentas/login/')
