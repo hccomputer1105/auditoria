@@ -27,6 +27,7 @@ from equipos.views import (
     dashboard_rrhh_view,
     auditoria_iso30414_view,
     descargar_pdf_iso30414,
+    gestion_usuarios_empresa_view,
 )
 
 urlpatterns = [
@@ -63,5 +64,6 @@ urlpatterns = [
     path('rrhh/iso-30414/', auditoria_iso30414_view, name='auditoria_iso30414'),
     path('rrhh/dashboard/', dashboard_rrhh_view, name='dashboard_rrhh'),
     path('rrhh/iso-30414/pdf/', descargar_pdf_iso30414, name='descargar_pdf_iso30414'),
+    path('empresa/usuarios/', gestion_usuarios_empresa_view, name='gestion_usuarios_empresa'),
     
 ]

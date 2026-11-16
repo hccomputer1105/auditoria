@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import (
+    Empresa,
     Computadora,
     Perfil,
     EvaluacionISO,
@@ -16,34 +17,44 @@ from .models import (
     EvaluacionCargaLaboral,
     EvaluacionDesempeno,
     AuditoriaCapitalHumanoISO,
+    obtener_usuario_base_empresa,
 )
+from .decorators import requiere_modulo, redireccion_por_rol
 
+
+# =========================================================================
+# MÓDULO 1: TI / HARDWARE / MULTINORMA ISO
+# =========================================================================
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_view(request):
     if request.user.is_staff:
         return redirect('admin_dashboard')
 
-    equipos = Computadora.objects.filter(usuario_empresa=request.user)
+    perfil = getattr(request.user, 'perfil', None)
+    if perfil and perfil.rol != 'ADMIN_EMPRESA' and not perfil.permiso_ti:
+        return redirect(redireccion_por_rol(request.user))
+
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    equipos = Computadora.objects.filter(usuario_empresa=usuario_org)
     total_equipos = equipos.count()
 
     equipos_buenos = equipos.filter(estatus='Bueno').count()
     equipos_reparacion = equipos.filter(estatus='En reparación').count()
     equipos_malos = equipos.filter(estatus='Malo').count()
 
-    ultima_evaluacion = EvaluacionISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    ultima_evaluacion = EvaluacionISO.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
 
     score_seguro = 0
     score_inseguro = 100
     puntaje_obtenido = 0
-    puntaje_maximo = 42  # 21 reactivos x 2 puntos cada uno
+    puntaje_maximo = 42
 
     fortalezas = []
     debilidades = []
     oportunidades = []
     amenazas = []
 
-    # --- 1. ANÁLISIS DEL INVENTARIO ---
     if total_equipos > 0:
         sin_antivirus = equipos.filter(tiene_antivirus=False).count()
         sin_lic_win = equipos.filter(licencia_windows=False).count()
@@ -68,7 +79,6 @@ def dashboard_view(request):
         debilidades.append("No se han registrado activos de hardware en el inventario.")
         oportunidades.append("Iniciar el levantamiento de inventario para tener trazabilidad de los activos TI.")
 
-    # --- 2. ANÁLISIS DE LA EVALUACIÓN MULTINORMA ---
     if ultima_evaluacion:
         criterios = {
             'p1_1': ("Alineación estratégica entre el plan de TI y los objetivos del negocio (ISO 38500).", "Compras de TI aisladas sin justificación de costo/beneficio ni aval directivo."),
@@ -137,7 +147,10 @@ def dashboard_view(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def inventario_view(request):
+    usuario_org = obtener_usuario_base_empresa(request.user)
+
     if request.method == 'POST':
         tipo = request.POST.get('tipo_equipo')
         es_computo_o_servidor = tipo in ['Computadora', 'Laptop', 'Servidor']
@@ -148,7 +161,7 @@ def inventario_view(request):
         fecha_mtto = request.POST.get('ultimo_mantenimiento') or None
 
         nuevo_equipo = Computadora(
-            usuario_empresa=request.user,
+            usuario_empresa=usuario_org,
             tipo_equipo=tipo,
             estatus=request.POST.get('estatus'),
             ultimo_mantenimiento=fecha_mtto,
@@ -183,13 +196,15 @@ def inventario_view(request):
         nuevo_equipo.save()
         return redirect('inventario')
 
-    mis_equipos = Computadora.objects.filter(usuario_empresa=request.user).order_by('-fecha_auditoria')
+    mis_equipos = Computadora.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_auditoria')
     return render(request, 'equipos/inventario.html', {'mis_equipos': mis_equipos})
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def dashboard_equipo_view(request, id):
-    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=usuario_org)
     estado, color, puntaje, riesgos, mejoras = equipo.evaluar_diagnostico()
 
     context = {
@@ -205,10 +220,12 @@ def dashboard_equipo_view(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def descargar_pdf_equipo(request, id):
-    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
-    perfil = Perfil.objects.filter(usuario=request.user).first()
-    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=usuario_org)
+    perfil = Perfil.objects.filter(usuario=usuario_org).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else usuario_org.username
     estado_diag, _, puntaje_salud, riesgos, mejoras = equipo.evaluar_diagnostico()
 
     buffer = io.BytesIO()
@@ -320,7 +337,7 @@ def descargar_pdf_equipo(request, id):
 
     p.setFont("Helvetica", 9)
     p.setFillColor(colors.gray)
-    p.drawString(45, 35, "Documento generado automáticamente por la Plataforma de Consultoría y Auditoría Empresarial.")
+    p.drawString(45, 35, "Documento generado automáticamente por AuditTech.")
 
     p.showPage()
     p.save()
@@ -332,15 +349,19 @@ def descargar_pdf_equipo(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def eliminar_equipo(request, id):
-    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=usuario_org)
     equipo.delete()
     return redirect('inventario')
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def editar_equipo(request, id):
-    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    equipo = get_object_or_404(Computadora, id=id, usuario_empresa=usuario_org)
 
     if request.method == 'POST':
         tipo = request.POST.get('tipo_equipo')
@@ -391,12 +412,14 @@ def editar_equipo(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('ti')
 def evaluacion_view(request):
-    evaluacion = EvaluacionISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    evaluacion = EvaluacionISO.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
 
     if request.method == 'POST':
         if not evaluacion:
-            evaluacion = EvaluacionISO(usuario_empresa=request.user)
+            evaluacion = EvaluacionISO(usuario_empresa=usuario_org)
 
         campos_numericos = [
             'p1_1', 'p1_2', 'p1_3',
@@ -438,13 +461,19 @@ def evaluacion_view(request):
     return render(request, 'equipos/evaluacion.html', {'eval': evaluacion})
 
 
+# =========================================================================
+# MÓDULO 2: MARKETING Y SMARKETING
+# =========================================================================
+
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('marketing')
 def evaluacion_marketing_view(request):
-    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
 
     if request.method == 'POST':
         if not evaluacion:
-            evaluacion = EvaluacionMarketing(usuario_empresa=request.user)
+            evaluacion = EvaluacionMarketing(usuario_empresa=usuario_org)
 
         codigos = [
             'm1_1', 'm1_2', 'm1_3', 'm1_4', 'm1_5', 'm1_6', 'm1_7', 'm1_8', 'm1_9', 'm1_10', 'm1_11',
@@ -462,8 +491,10 @@ def evaluacion_marketing_view(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('marketing')
 def dashboard_marketing_view(request):
-    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
 
     puntaje_c1 = 0
     max_c1 = 55
@@ -621,11 +652,18 @@ def dashboard_marketing_view(request):
     return render(request, 'equipos/dashboard_marketing.html', context)
 
 
+# =========================================================================
+# MÓDULO 3: TALENTO HUMANO / RRHH / ISO 30414:2025
+# =========================================================================
+
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def carga_laboral_view(request):
+    usuario_org = obtener_usuario_base_empresa(request.user)
+
     if request.method == 'POST':
         nueva_carga = EvaluacionCargaLaboral(
-            usuario_empresa=request.user,
+            usuario_empresa=usuario_org,
             nombre_colaborador=request.POST.get('nombre_colaborador'),
             cargo_actual=request.POST.get('cargo_actual'),
             departamento=request.POST.get('departamento'),
@@ -646,7 +684,7 @@ def carga_laboral_view(request):
         nueva_carga.save()
         return redirect('carga_laboral')
 
-    evaluaciones = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
+    evaluaciones = EvaluacionCargaLaboral.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion')
 
     total_evaluados = evaluaciones.count()
     criticos = sum(1 for e in evaluaciones if e.porcentaje_saturacion() > 65)
@@ -664,17 +702,22 @@ def carga_laboral_view(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def eliminar_carga_view(request, id):
-    registro = get_object_or_404(EvaluacionCargaLaboral, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    registro = get_object_or_404(EvaluacionCargaLaboral, id=id, usuario_empresa=usuario_org)
     registro.delete()
     return redirect('carga_laboral')
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def evaluacion_desempeno_view(request):
+    usuario_org = obtener_usuario_base_empresa(request.user)
+
     if request.method == 'POST':
         nueva_eval = EvaluacionDesempeno(
-            usuario_empresa=request.user,
+            usuario_empresa=usuario_org,
             nombre_colaborador=request.POST.get('nombre_colaborador'),
             cargo=request.POST.get('cargo'),
             departamento=request.POST.get('departamento'),
@@ -700,7 +743,7 @@ def evaluacion_desempeno_view(request):
         nueva_eval.save()
         return redirect('evaluacion_desempeno')
 
-    evaluaciones = EvaluacionDesempeno.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
+    evaluaciones = EvaluacionDesempeno.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion')
 
     total_evaluados = evaluaciones.count()
     sobresalientes = sum(1 for e in evaluaciones if e.puntaje_total() >= 63)
@@ -720,15 +763,19 @@ def evaluacion_desempeno_view(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def eliminar_desempeno_view(request, id):
-    registro = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    registro = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=usuario_org)
     registro.delete()
     return redirect('evaluacion_desempeno')
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def editar_desempeno_view(request, id):
-    evaluacion = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    evaluacion = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=usuario_org)
 
     if request.method == 'POST':
         evaluacion.nombre_colaborador = request.POST.get('nombre_colaborador')
@@ -750,8 +797,10 @@ def editar_desempeno_view(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def dashboard_persona_desempeno_view(request, id):
-    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=usuario_org)
     baremo = ev.diagnostico_baremo()
 
     bloques_valores = [ev.puntaje_bloque_1(), ev.puntaje_bloque_2(), ev.puntaje_bloque_3()]
@@ -771,9 +820,11 @@ def dashboard_persona_desempeno_view(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def dashboard_rrhh_view(request):
-    cargas = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
-    desempenos = EvaluacionDesempeno.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    cargas = EvaluacionCargaLaboral.objects.filter(usuario_empresa=usuario_org).order_by('nombre_colaborador')
+    desempenos = EvaluacionDesempeno.objects.filter(usuario_empresa=usuario_org).order_by('nombre_colaborador')
 
     nombres_set = set()
     for c in cargas:
@@ -825,10 +876,12 @@ def dashboard_rrhh_view(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def descargar_pdf_desempeno(request, id):
-    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
-    perfil = Perfil.objects.filter(usuario=request.user).first()
-    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=usuario_org)
+    perfil = Perfil.objects.filter(usuario=usuario_org).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else usuario_org.username
     baremo = ev.diagnostico_baremo()
 
     buffer = io.BytesIO()
@@ -940,17 +993,19 @@ def descargar_pdf_desempeno(request, id):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def descargar_pdf_rrhh(request):
+    usuario_org = obtener_usuario_base_empresa(request.user)
     empleado = request.GET.get('empleado', '').strip()
-    perfil = Perfil.objects.filter(usuario=request.user).first()
-    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+    perfil = Perfil.objects.filter(usuario=usuario_org).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else usuario_org.username
 
     carga_emp = EvaluacionCargaLaboral.objects.filter(
-        usuario_empresa=request.user, nombre_colaborador__iexact=empleado
+        usuario_empresa=usuario_org, nombre_colaborador__iexact=empleado
     ).order_by('-fecha_evaluacion').first()
 
     desemp_emp = EvaluacionDesempeno.objects.filter(
-        usuario_empresa=request.user, nombre_colaborador__iexact=empleado
+        usuario_empresa=usuario_org, nombre_colaborador__iexact=empleado
     ).order_by('-fecha_evaluacion').first()
 
     buffer = io.BytesIO()
@@ -1034,7 +1089,7 @@ def descargar_pdf_rrhh(request):
 
     p.setFont("Helvetica", 8)
     p.setFillColor(colors.gray)
-    p.drawString(45, 35, "Reporte consolidado generado automáticamente por la Plataforma de Auditoría y Gestión Empresarial.")
+    p.drawString(45, 35, "Reporte consolidado generado automáticamente por AuditTech.")
 
     p.showPage()
     p.save()
@@ -1047,12 +1102,14 @@ def descargar_pdf_rrhh(request):
 
 
 @login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
 def auditoria_iso30414_view(request):
-    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
 
     if request.method == 'POST':
         if not auditoria:
-            auditoria = AuditoriaCapitalHumanoISO(usuario_empresa=request.user)
+            auditoria = AuditoriaCapitalHumanoISO(usuario_empresa=usuario_org)
 
         auditoria.periodo_reporte = request.POST.get('periodo_reporte', 'Anual 2026')
         auditoria.total_empleados_fte = float(request.POST.get('total_empleados_fte') or 1)
@@ -1080,6 +1137,196 @@ def auditoria_iso30414_view(request):
     return render(request, 'equipos/auditoria_iso30414.html', context)
 
 
+@login_required(login_url='/cuentas/login/')
+@requiere_modulo('rrhh')
+def descargar_pdf_iso30414(request):
+    usuario_org = obtener_usuario_base_empresa(request.user)
+    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=usuario_org).order_by('-fecha_evaluacion').first()
+    perfil = Perfil.objects.filter(usuario=usuario_org).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else usuario_org.username
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(45, alto - 42, "INFORME DE CAPITAL HUMANO Y SOSTENIBILIDAD ESG (ISO 30414:2025)")
+    p.setFont("Helvetica", 10)
+    if auditoria:
+        nivel_info = auditoria.nivel_madurez_esg()
+        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Período: {auditoria.periodo_reporte}  |  Cumplimiento: {auditoria.porcentaje_cumplimiento_iso()}% ({nivel_info['nivel']})")
+    else:
+        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Sin auditoría registrada")
+
+    y = alto - 125
+
+    if not auditoria:
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica", 11)
+        p.drawString(45, y, "Aún no se han registrado datos en el módulo de Auditoría ISO 30414:2025.")
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Reporte_ISO30414_{empresa_nombre}.pdf"'
+        return response
+
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "1. Indicadores Cuantitativos Obligatorios (KPIs Directivos)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+
+    y -= 22
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    p.drawString(55, y, f"• Plantilla Activa (FTE):        {auditoria.total_empleados_fte} colaboradores")
+    p.drawString(320, y, f"• Productividad por FTE:      ${auditoria.productividad_por_fte()}")
+    y -= 18
+    p.drawString(55, y, f"• Ingresos Totales Período:      ${auditoria.ingresos_totales}")
+    p.drawString(320, y, f"• ROI Capital Humano (HCROI): {auditoria.roi_capital_humano()}x")
+    y -= 18
+    p.drawString(55, y, f"• Costo Total Fuerza Laboral:    ${auditoria.costo_total_fuerza_laboral}")
+    p.drawString(320, y, f"• Tasa Rotación Total:        {auditoria.tasa_rotacion_total()}% (Vol: {auditoria.tasa_rotacion_voluntaria()}%)")
+    y -= 18
+    p.drawString(55, y, f"• Formación por FTE:             {auditoria.horas_formacion_por_fte()} hrs/FTE")
+    p.drawString(320, y, f"• Tasa de Ausentismo:         {auditoria.tasa_ausentismo()}%")
+
+    y -= 34
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, f"2. Evaluación de Madurez por Área ISO 30414:2025 ({auditoria.puntaje_esg_total()}/44 pts - {auditoria.porcentaje_cumplimiento_iso()}%)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+
+    y -= 20
+    p.setFont("Helvetica", 9)
+    areas_nombres = [
+        "1. Composición de Fuerza Laboral",
+        "2. Diversidad e Inclusión",
+        "3. Costos de Capital Humano",
+        "4. Productividad y Valor Económico",
+        "5. Salud, Seguridad y Bienestar Psicológico",
+        "6. Liderazgo, Cultura y Compromiso",
+        "7. Cumplimiento, Ética y Derechos Humanos",
+        "8. Reclutamiento y Atracción",
+        "9. Movilidad Interna y Sucesión",
+        "10. Rotación y Retención de Talento",
+        "11. Habilidades, Desarrollo y Gobernanza IA",
+    ]
+    puntajes_areas = auditoria.puntajes_por_area()
+
+    for idx, nombre_area in enumerate(areas_nombres):
+        pts = puntajes_areas[idx]
+        if pts == 4:
+            estado_txt = "Auditado y Consolidado (4/4 pts)"
+        elif pts >= 2:
+            estado_txt = f"En Desarrollo / Parcial ({pts}/4 pts)"
+        else:
+            estado_txt = f"Brecha Crítica / Inicial ({pts}/4 pts)"
+
+        p.setFillColor(colors.black)
+        p.drawString(55, y, f"{nombre_area}:")
+        p.drawString(310, y, estado_txt)
+        y -= 16
+
+    y -= 18
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "3. Declaración de Materialidad ESG y Justificación Directiva")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 18
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    mat_txt = auditoria.declaracion_materialidad.strip() or "Sin observaciones de materialidad registradas para este período."
+    p.drawString(55, y, mat_txt[:105])
+    if len(mat_txt) > 105:
+        y -= 14
+        p.drawString(55, y, mat_txt[105:210])
+
+    p.setFont("Helvetica", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Documento generado por AuditTech bajo estándares ISO 30414:2025 de Capital Humano y Sostenibilidad ESG.")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Auditoria_ISO30414_{empresa_nombre}.pdf"'
+    return response
+
+
+# =========================================================================
+# GESTIÓN DE USUARIOS Y ROLES POR EMPRESA (ADMIN DE EMPRESA)
+# =========================================================================
+
+@login_required(login_url='/cuentas/login/')
+def gestion_usuarios_empresa_view(request):
+    perfil_actual = getattr(request.user, 'perfil', None)
+    if not perfil_actual or perfil_actual.rol != 'ADMIN_EMPRESA':
+        return redirect(redireccion_por_rol(request.user))
+
+    if not perfil_actual.empresa:
+        nombre = perfil_actual.nombre_empresa or f"Empresa ({request.user.username})"
+        empresa_obj, _ = Empresa.objects.get_or_create(nombre=nombre)
+        perfil_actual.empresa = empresa_obj
+        perfil_actual.save()
+
+    empresa = perfil_actual.empresa
+    error_msg = None
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'crear_usuario':
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '').strip()
+            rol = request.POST.get('rol', 'RRHH')
+
+            if User.objects.filter(username=username).exists():
+                error_msg = f"El nombre de usuario '{username}' ya existe en el sistema."
+            elif username and password:
+                nuevo_user = User.objects.create_user(username=username, email=email, password=password)
+                Perfil.objects.create(
+                    usuario=nuevo_user,
+                    empresa=empresa,
+                    nombre_empresa=empresa.nombre,
+                    rol=rol,
+                    permiso_ti=(rol in ['ADMIN_EMPRESA', 'TI']),
+                    permiso_marketing=(rol in ['ADMIN_EMPRESA', 'MARKETING']),
+                    permiso_rrhh=(rol in ['ADMIN_EMPRESA', 'RRHH']),
+                )
+                return redirect('gestion_usuarios_empresa')
+
+        elif accion == 'actualizar_permisos':
+            perfil_id = request.POST.get('perfil_id')
+            p_editar = get_object_or_404(Perfil, id=perfil_id, empresa=empresa)
+            if p_editar.usuario != request.user:
+                p_editar.rol = request.POST.get('rol', p_editar.rol)
+                p_editar.permiso_ti = request.POST.get('permiso_ti') == 'on'
+                p_editar.permiso_marketing = request.POST.get('permiso_marketing') == 'on'
+                p_editar.permiso_rrhh = request.POST.get('permiso_rrhh') == 'on'
+                p_editar.save()
+            return redirect('gestion_usuarios_empresa')
+
+        elif accion == 'eliminar_usuario':
+            perfil_id = request.POST.get('perfil_id')
+            p_eliminar = get_object_or_404(Perfil, id=perfil_id, empresa=empresa)
+            if p_eliminar.usuario != request.user:
+                p_eliminar.usuario.delete()
+            return redirect('gestion_usuarios_empresa')
+
+    miembros = Perfil.objects.filter(empresa=empresa).select_related('usuario').order_by('id')
+    return render(request, 'equipos/gestion_usuarios_empresa.html', {
+        'empresa': empresa,
+        'miembros': miembros,
+        'error_msg': error_msg,
+    })
+
+
 # =========================================================================
 # SECCIÓN MASTER ADMIN (CENTRO DE CONTROL MULTI-EMPRESA)
 # =========================================================================
@@ -1091,7 +1338,10 @@ def es_administrador(user):
 @login_required(login_url='/cuentas/login/')
 @user_passes_test(es_administrador, login_url='/')
 def admin_dashboard_view(request):
-    clientes = User.objects.filter(is_staff=False).order_by('-date_joined')
+    # Mostrar las cuentas principales (Administradores de cada empresa)
+    clientes = User.objects.filter(is_staff=False).exclude(
+        perfil__rol__in=['TI', 'MARKETING', 'RRHH']
+    ).order_by('-date_joined')
 
     total_empresas = clientes.count()
     total_equipos_global = Computadora.objects.count()
@@ -1305,7 +1555,6 @@ def exportar_reporte_pdf(request, user_id):
             p.showPage()
             y = alto - 50
 
-    # 1. Inventario TI
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 12)
     p.drawString(45, y, f"1. Inventario de Activos TI ({equipos.count()} equipos registrados)")
@@ -1323,7 +1572,6 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Sin equipos registrados.")
         y -= 15
 
-    # 2. Auditoría TI (ISO)
     y -= 12
     verificar_salto(60)
     p.setFillColor(colors.HexColor("#1e293b"))
@@ -1341,7 +1589,6 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Evaluación pendiente por realizar.")
     y -= 15
 
-    # 3. Auditoría Marketing
     y -= 12
     verificar_salto(60)
     p.setFillColor(colors.HexColor("#1e293b"))
@@ -1359,7 +1606,6 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Evaluación pendiente por realizar.")
     y -= 15
 
-    # 4. Carga Laboral
     y -= 12
     verificar_salto(60)
     p.setFillColor(colors.HexColor("#1e293b"))
@@ -1378,7 +1624,6 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Sin evaluaciones de carga laboral registradas.")
         y -= 15
 
-    # 5. Evaluación de Desempeño
     y -= 12
     verificar_salto(60)
     p.setFillColor(colors.HexColor("#1e293b"))
@@ -1398,7 +1643,6 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Sin evaluaciones de desempeño registradas.")
         y -= 15
 
-    # 6. Auditoría ISO 30414:2025 (ESG)
     y -= 12
     verificar_salto(75)
     p.setFillColor(colors.HexColor("#1e293b"))
@@ -1427,125 +1671,4 @@ def exportar_reporte_pdf(request, user_id):
     buffer.seek(0)
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Reporte_Ejecutivo_{cliente.username}.pdf"'
-    return response
-@login_required(login_url='/cuentas/login/')
-def descargar_pdf_iso30414(request):
-    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
-    perfil = Perfil.objects.filter(usuario=request.user).first()
-    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
-
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    ancho, alto = letter
-
-    # Encabezado corporativo
-    p.setFillColor(colors.HexColor("#0f172a"))
-    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
-    p.setFillColor(colors.white)
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(45, alto - 42, "INFORME DE CAPITAL HUMANO Y SOSTENIBILIDAD ESG (ISO 30414:2025)")
-    p.setFont("Helvetica", 10)
-    if auditoria:
-        nivel_info = auditoria.nivel_madurez_esg()
-        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Período: {auditoria.periodo_reporte}  |  Cumplimiento: {auditoria.porcentaje_cumplimiento_iso()}% ({nivel_info['nivel']})")
-    else:
-        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Sin auditoría registrada")
-
-    y = alto - 125
-
-    if not auditoria:
-        p.setFillColor(colors.black)
-        p.setFont("Helvetica", 11)
-        p.drawString(45, y, "Aún no se han registrado datos en el módulo de Auditoría ISO 30414:2025.")
-        p.showPage()
-        p.save()
-        buffer.seek(0)
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="Reporte_ISO30414_{empresa_nombre}.pdf"'
-        return response
-
-    # 1. Indicadores Cuantitativos Directivos
-    p.setFillColor(colors.HexColor("#1e293b"))
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(45, y, "1. Indicadores Cuantitativos Obligatorios (KPIs Directivos)")
-    p.line(45, y - 4, ancho - 45, y - 4)
-
-    y -= 22
-    p.setFont("Helvetica", 10)
-    p.setFillColor(colors.black)
-    p.drawString(55, y, f"• Plantilla Activa (FTE):        {auditoria.total_empleados_fte} colaboradores")
-    p.drawString(320, y, f"• Productividad por FTE:      ${auditoria.productividad_por_fte()}")
-    y -= 18
-    p.drawString(55, y, f"• Ingresos Totales Período:      ${auditoria.ingresos_totales}")
-    p.drawString(320, y, f"• ROI Capital Humano (HCROI): {auditoria.roi_capital_humano()}x")
-    y -= 18
-    p.drawString(55, y, f"• Costo Total Fuerza Laboral:    ${auditoria.costo_total_fuerza_laboral}")
-    p.drawString(320, y, f"• Tasa Rotación Total:        {auditoria.tasa_rotacion_total()}% (Vol: {auditoria.tasa_rotacion_voluntaria()}%)")
-    y -= 18
-    p.drawString(55, y, f"• Formación por FTE:             {auditoria.horas_formacion_por_fte()} hrs/FTE")
-    p.drawString(320, y, f"• Tasa de Ausentismo:         {auditoria.tasa_ausentismo()}%")
-
-    # 2. Desglose de las 11 Áreas ISO 30414:2025
-    y -= 34
-    p.setFillColor(colors.HexColor("#1e293b"))
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(45, y, f"2. Evaluación de Madurez por Área ISO 30414:2025 ({auditoria.puntaje_esg_total()}/44 pts - {auditoria.porcentaje_cumplimiento_iso()}%)")
-    p.line(45, y - 4, ancho - 45, y - 4)
-
-    y -= 20
-    p.setFont("Helvetica", 9)
-    areas_nombres = [
-        "1. Composición de Fuerza Laboral",
-        "2. Diversidad e Inclusión",
-        "3. Costos de Capital Humano",
-        "4. Productividad y Valor Económico",
-        "5. Salud, Seguridad y Bienestar Psicológico",
-        "6. Liderazgo, Cultura y Compromiso",
-        "7. Cumplimiento, Ética y Derechos Humanos",
-        "8. Reclutamiento y Atracción",
-        "9. Movilidad Interna y Sucesión",
-        "10. Rotación y Retención de Talento",
-        "11. Habilidades, Desarrollo y Gobernanza IA",
-    ]
-    puntajes_areas = auditoria.puntajes_por_area()
-
-    for idx, nombre_area in enumerate(areas_nombres):
-        pts = puntajes_areas[idx]
-        if pts == 4:
-            estado_txt = "Auditado y Consolidado (4/4 pts)"
-        elif pts >= 2:
-            estado_txt = f"En Desarrollo / Parcial ({pts}/4 pts)"
-        else:
-            estado_txt = f"Brecha Crítica / Inicial ({pts}/4 pts)"
-
-        p.setFillColor(colors.black)
-        p.drawString(55, y, f"{nombre_area}:")
-        p.drawString(310, y, estado_txt)
-        y -= 16
-
-    # 3. Declaración de Materialidad ESG
-    y -= 18
-    p.setFillColor(colors.HexColor("#1e293b"))
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(45, y, "3. Declaración de Materialidad ESG y Justificación Directiva")
-    p.line(45, y - 4, ancho - 45, y - 4)
-    y -= 18
-    p.setFont("Helvetica", 9)
-    p.setFillColor(colors.black)
-    mat_txt = auditoria.declaracion_materialidad.strip() or "Sin observaciones de materialidad registradas para este período."
-    p.drawString(55, y, mat_txt[:105])
-    if len(mat_txt) > 105:
-        y -= 14
-        p.drawString(55, y, mat_txt[105:210])
-
-    p.setFont("Helvetica", 8)
-    p.setFillColor(colors.gray)
-    p.drawString(45, 35, "Documento generado por AuditTech bajo estándares ISO 30414:2025 de Capital Humano y Sostenibilidad ESG.")
-
-    p.showPage()
-    p.save()
-
-    buffer.seek(0)
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="Auditoria_ISO30414_{empresa_nombre}.pdf"'
     return response

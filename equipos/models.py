@@ -4,12 +4,60 @@ from datetime import date
 
 
 # 1. TABLA DE EMPRESAS (PERFIL)
-class Perfil(models.Model):
-    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
-    nombre_empresa = models.CharField("Nombre de la Empresa", max_length=150)
+class Empresa(models.Model):
+    nombre = models.CharField("Nombre de la Empresa", max_length=150, unique=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.nombre_empresa
+        return self.nombre
+
+
+class Perfil(models.Model):
+    ROLES_CHOICES = [
+        ('ADMIN_EMPRESA', 'Administrador de Empresa (Acceso Total)'),
+        ('TI', 'Auditor / Encargado de TI'),
+        ('MARKETING', 'Especialista de Marketing y Ventas'),
+        ('RRHH', 'Gestión de Talento Humano (RRHH)'),
+    ]
+
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='miembros', null=True, blank=True)
+    # Conservamos nombre_empresa por compatibilidad con vistas anteriores
+    nombre_empresa = models.CharField("Nombre de la Empresa", max_length=150, blank=True, default="")
+    rol = models.CharField("Rol en la Empresa", max_length=30, choices=ROLES_CHOICES, default='ADMIN_EMPRESA')
+
+    # Permisos granulares por módulo (el Admin de Empresa puede activar/desactivar por usuario)
+    permiso_ti = models.BooleanField("Acceso Módulo TI", default=True)
+    permiso_marketing = models.BooleanField("Acceso Módulo Marketing", default=True)
+    permiso_rrhh = models.BooleanField("Acceso Módulo RRHH / ISO 30414", default=True)
+
+    def save(self, *args, **kwargs):
+        if self.empresa:
+            self.nombre_empresa = self.empresa.nombre
+        # Si es Administrador de Empresa, garantizar acceso total
+        if self.rol == 'ADMIN_EMPRESA':
+            self.permiso_ti = True
+            self.permiso_marketing = True
+            self.permiso_rrhh = True
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        emp_nombre = self.empresa.nombre if self.empresa else self.nombre_empresa
+        return f"{self.usuario.username} - {emp_nombre} ({self.get_rol_display()})"
+
+
+def obtener_usuario_base_empresa(user):
+    """
+    Devuelve el usuario principal (Admin de la Empresa) dueño de los registros.
+    Así, los usuarios de TI, Marketing y RRHH de una misma empresa ven y editan
+    los datos compartidos de su organización.
+    """
+    perfil = getattr(user, 'perfil', None)
+    if perfil and perfil.empresa:
+        admin_perfil = Perfil.objects.filter(empresa=perfil.empresa, rol='ADMIN_EMPRESA').order_by('id').first()
+        if admin_perfil:
+            return admin_perfil.usuario
+    return user
 
 
 # 2. TABLA DE INVENTARIO (COMPUTADORAS)

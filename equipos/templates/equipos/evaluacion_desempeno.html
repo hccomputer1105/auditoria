@@ -20,21 +20,36 @@
             <div class="col-md-2 sidebar p-3 text-white">
                 <h4 class="text-center mt-2 mb-4 fw-bold text-info"><i class="bi bi-shield-lock"></i> AuditTech</h4>
                 <hr class="border-secondary">
-                <ul class="nav flex-column">
-                    <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
-                    <li class="nav-item"><a href="{% url 'inventario' %}" class="nav-link"><i class="bi bi-pc-display me-2"></i> Inventario Hardware</a></li>
-                    <li class="nav-item"><a href="{% url 'evaluacion' %}" class="nav-link"><i class="bi bi-clipboard-check me-2"></i> Evaluación TI</a></li>
-                    <hr class="border-secondary my-2">
-                    <li class="nav-item"><a href="{% url 'dashboard_marketing' %}" class="nav-link"><i class="bi bi-graph-up-arrow me-2 text-info"></i> Dashboard Marketing</a></li>
-                    <li class="nav-item"><a href="{% url 'evaluacion_marketing' %}" class="nav-link"><i class="bi bi-megaphone me-2 text-warning"></i> Evaluación Marketing</a></li>
-                    <hr class="border-secondary my-2">
-                    <li class="nav-item"><a href="{% url 'carga_laboral' %}" class="nav-link"><i class="bi bi-person-workspace me-2 text-success"></i> Carga Laboral</a></li>
-                    <li class="nav-item"><a href="{% url 'evaluacion_desempeno' %}" class="nav-link active"><i class="bi bi-people-fill me-2 text-info"></i> Evaluación Desempeño</a></li>
-                     <li class="nav-item"><a href="{% url 'dashboard_rrhh' %}" class="nav-link"><i class="bi bi-pie-chart-fill me-2 text-warning"></i> Dashboard RRHH</a></li>
-                     <a href="{% url 'auditoria_iso30414' %}" class="nav-link">
-    <i class="bi bi-globe2"></i> ISO 30414:2025 (ESG)
-</a>
-                </ul>
+                   <ul class="nav flex-column">
+            {% if request.user.perfil.rol == 'ADMIN_EMPRESA' or request.user.perfil.permiso_ti %}
+    <li class="nav-item"><a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard TI</a></li>
+    <li class="nav-item"><a href="{% url 'inventario' %}" class="nav-link"><i class="bi bi-pc-display me-2"></i> Inventario Hardware</a></li>
+    <li class="nav-item"><a href="{% url 'evaluacion' %}" class="nav-link"><i class="bi bi-clipboard-check me-2"></i> Evaluación TI</a></li>
+    <div class="sidebar-divider"></div>
+{% endif %}
+
+{% if request.user.perfil.rol == 'ADMIN_EMPRESA' or request.user.perfil.permiso_marketing %}
+    <li class="nav-item"><a href="{% url 'dashboard_marketing' %}" class="nav-link"><i class="bi bi-graph-up-arrow me-2"></i> Dashboard Marketing</a></li>
+    <li class="nav-item"><a href="{% url 'evaluacion_marketing' %}" class="nav-link"><i class="bi bi-megaphone me-2"></i> Evaluación Marketing</a></li>
+    <div class="sidebar-divider"></div>
+{% endif %}
+
+{% if request.user.perfil.rol == 'ADMIN_EMPRESA' or request.user.perfil.permiso_rrhh %}
+    <li class="nav-item"><a href="{% url 'dashboard_rrhh' %}" class="nav-link"><i class="bi bi-pie-chart-fill text-warning me-2"></i> Dashboard RRHH</a></li>
+    <li class="nav-item"><a href="{% url 'carga_laboral' %}" class="nav-link"><i class="bi bi-person-workspace text-success me-2"></i> Carga Laboral</a></li>
+    <li class="nav-item"><a href="{% url 'evaluacion_desempeno' %}" class="nav-link"><i class="bi bi-people-fill text-info me-2"></i> Evaluación Desempeño</a></li>
+    <li class="nav-item"><a href="{% url 'auditoria_iso30414' %}" class="nav-link"><i class="bi bi-globe2 text-info me-2"></i> ISO 30414:2025 (ESG)</a></li>
+    <div class="sidebar-divider"></div>
+{% endif %}
+
+{% if request.user.perfil.rol == 'ADMIN_EMPRESA' %}
+    <li class="nav-item">
+        <a href="{% url 'gestion_usuarios_empresa' %}" class="nav-link text-warning fw-bold">
+            <i class="bi bi-person-gear me-2"></i> Usuarios y Roles
+        </a>
+    </li>
+{% endif %}
+        </ul>
             </div>
 
             <!-- ÁREA CENTRAL -->
