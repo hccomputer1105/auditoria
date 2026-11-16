@@ -1,8 +1,6 @@
 import csv
 import json
 import io
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -10,7 +8,15 @@ from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Computadora, Perfil, EvaluacionISO, EvaluacionMarketing, EvaluacionCargaLaboral, EvaluacionDesempeno
+from .models import (
+    Computadora,
+    Perfil,
+    EvaluacionISO,
+    EvaluacionMarketing,
+    EvaluacionCargaLaboral,
+    EvaluacionDesempeno,
+    AuditoriaCapitalHumanoISO,
+)
 
 
 @login_required(login_url='/cuentas/login/')
@@ -20,23 +26,23 @@ def dashboard_view(request):
 
     equipos = Computadora.objects.filter(usuario_empresa=request.user)
     total_equipos = equipos.count()
-    
+
     equipos_buenos = equipos.filter(estatus='Bueno').count()
     equipos_reparacion = equipos.filter(estatus='En reparación').count()
     equipos_malos = equipos.filter(estatus='Malo').count()
-    
+
     ultima_evaluacion = EvaluacionISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
-    
+
     score_seguro = 0
     score_inseguro = 100
     puntaje_obtenido = 0
     puntaje_maximo = 42  # 21 reactivos x 2 puntos cada uno
-    
+
     fortalezas = []
     debilidades = []
     oportunidades = []
     amenazas = []
-    
+
     # --- 1. ANÁLISIS DEL INVENTARIO ---
     if total_equipos > 0:
         sin_antivirus = equipos.filter(tiene_antivirus=False).count()
@@ -98,7 +104,6 @@ def dashboard_view(request):
             else:
                 debilidades.append(texto_debilidad)
 
-        # Amenazas críticas derivadas
         if ultima_evaluacion.p5_2 == 0 or ultima_evaluacion.p5_3 == 0:
             amenazas.append("Riesgo crítico de pérdida irreversible de datos y paralización operativa ante Ransomware o desastres.")
         if ultima_evaluacion.p2_3 == 0 or ultima_evaluacion.p3_1 == 0:
@@ -148,7 +153,6 @@ def inventario_view(request):
             estatus=request.POST.get('estatus'),
             ultimo_mantenimiento=fecha_mtto,
             version_firewall=request.POST.get('version_firewall', ''),
-            # Identificación y Red
             usuario_asignado=request.POST.get('usuario_asignado', ''),
             nombre_equipo=nombre_pc,
             serial=request.POST.get('serial', ''),
@@ -158,7 +162,6 @@ def inventario_view(request):
             sistema_operativo=request.POST.get('sistema_operativo', '') if es_computo_o_servidor else 'Firmware / Embebido',
             impresoras_instaladas=request.POST.get('impresoras_instaladas', '') if es_computo_o_servidor else '',
             discos_compartidos=discos_texto,
-            # Software y licencias
             tiene_antivirus=(request.POST.get('tiene_antivirus') == 'on') if es_computo_o_servidor else False,
             prog_anydesk=(request.POST.get('prog_anydesk') == 'on') if es_computo_o_servidor else False,
             prog_winrar=(request.POST.get('prog_winrar') == 'on') if es_computo_o_servidor else False,
@@ -170,7 +173,6 @@ def inventario_view(request):
             version_windows=request.POST.get('version_windows', '') if es_computo_o_servidor else '',
             licencia_erp=(request.POST.get('licencia_erp') == 'on') if es_computo_o_servidor else False,
             tipo_erp=request.POST.get('tipo_erp', '') if es_computo_o_servidor else '',
-            # Diagnóstico técnico
             firewall_activo=(request.POST.get('firewall_activo') == 'on') if es_computo_o_servidor else False,
             actualizaciones_so=(request.POST.get('actualizaciones_so') == 'on') if es_computo_o_servidor else False,
             espacio_disco_ok=(request.POST.get('espacio_disco_ok') == 'on') if es_computo_o_servidor else True,
@@ -180,9 +182,10 @@ def inventario_view(request):
         )
         nuevo_equipo.save()
         return redirect('inventario')
-        
+
     mis_equipos = Computadora.objects.filter(usuario_empresa=request.user).order_by('-fecha_auditoria')
     return render(request, 'equipos/inventario.html', {'mis_equipos': mis_equipos})
+
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_equipo_view(request, id):
@@ -212,17 +215,15 @@ def descargar_pdf_equipo(request, id):
     p = canvas.Canvas(buffer, pagesize=letter)
     ancho, alto = letter
 
-    # Encabezado corporativo
     p.setFillColor(colors.HexColor("#0f172a"))
     p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
-    
+
     p.setFillColor(colors.white)
     p.setFont("Helvetica-Bold", 18)
     p.drawString(45, alto - 45, "FICHA TÉCNICA Y DIAGNÓSTICO DE HARDWARE")
     p.setFont("Helvetica", 11)
     p.drawString(45, alto - 68, f"Empresa: {empresa_nombre}  |  ID: #{equipo.id}  |  Diagnóstico: {estado_diag.upper()} ({puntaje_salud}%)")
 
-    # Sección 1: Identificación y Red
     y = alto - 125
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -248,7 +249,6 @@ def descargar_pdf_equipo(request, id):
     p.drawString(55, y, f"Último Mantenimiento:        {mtto_str}")
     p.drawString(330, y, f"Versión Firewall:    {equipo.version_firewall or 'N/A'}")
 
-    # Sección 2: Condicional para Computadora / Servidor
     if equipo.tipo_equipo in ['Computadora', 'Laptop', 'Servidor']:
         y -= 38
         p.setFillColor(colors.HexColor("#1e293b"))
@@ -286,7 +286,6 @@ def descargar_pdf_equipo(request, id):
         p.drawString(55, y, f"• AnyDesk / WinRAR / PDF: {'Sí' if equipo.prog_anydesk else 'No'} / {'Sí' if equipo.prog_winrar else 'No'} / {'Sí' if equipo.prog_pdf else 'No'}")
         p.drawString(330, y, f"• Sistema ERP:       {'Sí' if equipo.licencia_erp else 'No'} {f'({equipo.tipo_erp})' if equipo.tipo_erp else ''}")
 
-    # Sección 4: Diagnóstico Técnico Automático
     y -= 38
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -342,7 +341,7 @@ def eliminar_equipo(request, id):
 @login_required(login_url='/cuentas/login/')
 def editar_equipo(request, id):
     equipo = get_object_or_404(Computadora, id=id, usuario_empresa=request.user)
-    
+
     if request.method == 'POST':
         tipo = request.POST.get('tipo_equipo')
         es_computo_o_servidor = tipo in ['Computadora', 'Laptop', 'Servidor']
@@ -354,14 +353,14 @@ def editar_equipo(request, id):
         equipo.estatus = request.POST.get('estatus')
         equipo.ultimo_mantenimiento = request.POST.get('ultimo_mantenimiento') or None
         equipo.version_firewall = request.POST.get('version_firewall', '')
-        
+
         equipo.usuario_asignado = request.POST.get('usuario_asignado', '')
         equipo.nombre_equipo = request.POST.get('nombre_equipo', '').strip() or f"{tipo} Registrado"
         equipo.serial = request.POST.get('serial', '')
         equipo.grupo_dominio = request.POST.get('grupo_dominio', '')
         equipo.direccion_ip = request.POST.get('direccion_ip', '')
         equipo.direccion_mac = request.POST.get('direccion_mac', '')
-        
+
         equipo.sistema_operativo = request.POST.get('sistema_operativo', '') if es_computo_o_servidor else 'Firmware / Embebido'
         equipo.impresoras_instaladas = request.POST.get('impresoras_instaladas', '') if es_computo_o_servidor else ''
         equipo.discos_compartidos = discos_texto
@@ -387,7 +386,6 @@ def editar_equipo(request, id):
         equipo.save()
         return redirect('inventario')
 
-    # Convertir discos guardados en lista para pre-marcar los botones en el formulario de edición
     discos_actuales = [d.strip() for d in equipo.discos_compartidos.split(',')] if equipo.discos_compartidos else []
     return render(request, 'equipos/editar.html', {'equipo': equipo, 'discos_actuales': discos_actuales})
 
@@ -399,7 +397,7 @@ def evaluacion_view(request):
     if request.method == 'POST':
         if not evaluacion:
             evaluacion = EvaluacionISO(usuario_empresa=request.user)
-            
+
         campos_numericos = [
             'p1_1', 'p1_2', 'p1_3',
             'p2_1', 'p2_2', 'p2_3', 'p2_4',
@@ -421,22 +419,22 @@ def evaluacion_view(request):
         evaluacion.srv_camaras = request.POST.get('srv_camaras') == 'on'
         evaluacion.srv_otros = request.POST.get('srv_otros') == 'on'
         evaluacion.srv_otros_desc = request.POST.get('srv_otros_desc', '')
-        
+
         evaluacion.web_pagina = request.POST.get('web_pagina') == 'on'
         evaluacion.web_dominio = request.POST.get('web_dominio') == 'on'
         evaluacion.web_hosting = request.POST.get('web_hosting') == 'on'
         evaluacion.web_servicios = request.POST.get('web_servicios') == 'on'
-        
+
         evaluacion.seg_biometrico = request.POST.get('seg_biometrico') == 'on'
         evaluacion.seg_camaras = request.POST.get('seg_camaras') == 'on'
         evaluacion.seg_acceso = request.POST.get('seg_acceso') == 'on'
-        
+
         evaluacion.elec_ups = request.POST.get('elec_ups') == 'on'
         evaluacion.elec_estabilizador = request.POST.get('elec_estabilizador') == 'on'
-        
+
         evaluacion.save()
         return redirect('dashboard')
-        
+
     return render(request, 'equipos/evaluacion.html', {'eval': evaluacion})
 
 
@@ -447,45 +445,45 @@ def evaluacion_marketing_view(request):
     if request.method == 'POST':
         if not evaluacion:
             evaluacion = EvaluacionMarketing(usuario_empresa=request.user)
-            
+
         codigos = [
             'm1_1', 'm1_2', 'm1_3', 'm1_4', 'm1_5', 'm1_6', 'm1_7', 'm1_8', 'm1_9', 'm1_10', 'm1_11',
             'm2_1', 'm2_2', 'm2_3', 'm2_4', 'm2_5', 'm2_6', 'm2_7', 'm2_8', 'm2_9', 'm2_10', 'm2_11', 'm2_12', 'm2_13', 'm2_14', 'm2_15'
         ]
-        
+
         for cod in codigos:
             setattr(evaluacion, cod, int(request.POST.get(cod, 1)))
             setattr(evaluacion, f"ev_{cod}", request.POST.get(f"ev_{cod}", ""))
-            
+
         evaluacion.save()
         return redirect('dashboard_marketing')
-        
+
     return render(request, 'equipos/evaluacion_marketing.html', {'eval': evaluacion})
 
 
 @login_required(login_url='/cuentas/login/')
 def dashboard_marketing_view(request):
     evaluacion = EvaluacionMarketing.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
-    
+
     puntaje_c1 = 0
     max_c1 = 55
     puntaje_c2 = 0
     max_c2 = 75
     puntaje_total = 0
     max_total = 130
-    
+
     score_madurez = 0
     score_brecha = 100
-    
+
     fortalezas = []
     debilidades = []
     oportunidades = []
     amenazas = []
-    
+
     plan_smart_30 = []
     plan_smart_60 = []
     plan_smart_90 = []
-    
+
     race_fases = {
         'Reach (Alcance y Atracción)': [],
         'Act (Interacción y Captación)': [],
@@ -496,11 +494,11 @@ def dashboard_marketing_view(request):
     if evaluacion:
         campos_c1 = [f'm1_{i}' for i in range(1, 12)]
         campos_c2 = [f'm2_{i}' for i in range(1, 16)]
-        
+
         puntaje_c1 = sum(getattr(evaluacion, c, 1) for c in campos_c1)
         puntaje_c2 = sum(getattr(evaluacion, c, 1) for c in campos_c2)
         puntaje_total = puntaje_c1 + puntaje_c2
-        
+
         score_madurez = round((puntaje_total / max_total) * 100)
         score_brecha = 100 - score_madurez
 
@@ -649,7 +647,7 @@ def carga_laboral_view(request):
         return redirect('carga_laboral')
 
     evaluaciones = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion')
-    
+
     total_evaluados = evaluaciones.count()
     criticos = sum(1 for e in evaluaciones if e.porcentaje_saturacion() > 65)
     moderados = sum(1 for e in evaluaciones if 35 < e.porcentaje_saturacion() <= 65)
@@ -671,6 +669,7 @@ def eliminar_carga_view(request, id):
     registro.delete()
     return redirect('carga_laboral')
 
+
 @login_required(login_url='/cuentas/login/')
 def evaluacion_desempeno_view(request):
     if request.method == 'POST':
@@ -681,19 +680,16 @@ def evaluacion_desempeno_view(request):
             departamento=request.POST.get('departamento'),
             perspectiva=request.POST.get('perspectiva', 'Evaluación del Líder'),
             consentimiento_informado=request.POST.get('consentimiento_informado') == 'on',
-            # Bloque I
             b1_1=int(request.POST.get('b1_1', 3)),
             b1_2=int(request.POST.get('b1_2', 3)),
             b1_3=int(request.POST.get('b1_3', 3)),
             b1_4=int(request.POST.get('b1_4', 3)),
             b1_5=int(request.POST.get('b1_5', 3)),
-            # Bloque II
             b2_1=int(request.POST.get('b2_1', 3)),
             b2_2=int(request.POST.get('b2_2', 3)),
             b2_3=int(request.POST.get('b2_3', 3)),
             b2_4=int(request.POST.get('b2_4', 3)),
             b2_5=int(request.POST.get('b2_5', 3)),
-            # Bloque III
             b3_1=int(request.POST.get('b3_1', 3)),
             b3_2=int(request.POST.get('b3_2', 3)),
             b3_3=int(request.POST.get('b3_3', 3)),
@@ -728,6 +724,7 @@ def eliminar_desempeno_view(request, id):
     registro = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
     registro.delete()
     return redirect('evaluacion_desempeno')
+
 
 @login_required(login_url='/cuentas/login/')
 def editar_desempeno_view(request, id):
@@ -778,7 +775,6 @@ def dashboard_rrhh_view(request):
     cargas = EvaluacionCargaLaboral.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
     desempenos = EvaluacionDesempeno.objects.filter(usuario_empresa=request.user).order_by('nombre_colaborador')
 
-    # Unificar lista única de nombres de colaboradores registrados en cualquiera de los dos módulos
     nombres_set = set()
     for c in cargas:
         if c.nombre_colaborador:
@@ -793,15 +789,12 @@ def dashboard_rrhh_view(request):
     if not empleado_seleccionado and lista_empleados:
         empleado_seleccionado = lista_empleados[0]
 
-    # Buscar registros del empleado seleccionado (coincidencia exacta sin importar mayúsculas/minúsculas)
     carga_emp = cargas.filter(nombre_colaborador__iexact=empleado_seleccionado).order_by('-fecha_evaluacion').first() if empleado_seleccionado else None
     desemp_emp = desempenos.filter(nombre_colaborador__iexact=empleado_seleccionado).order_by('-fecha_evaluacion').first() if empleado_seleccionado else None
 
-    # Preparar datos JSON para gráficos con valores visibles
     carga_bloques = [0, 0, 0, 0]
     saturacion_val = 0
     if carga_emp:
-        # Cada bloque de carga tiene 3 reactivos (c1_1..c1_3, etc.)
         b1_c = getattr(carga_emp, 'c1_1', 0) + getattr(carga_emp, 'c1_2', 0) + getattr(carga_emp, 'c1_3', 0)
         b2_c = getattr(carga_emp, 'c2_1', 0) + getattr(carga_emp, 'c2_2', 0) + getattr(carga_emp, 'c2_3', 0)
         b3_c = getattr(carga_emp, 'c3_1', 0) + getattr(carga_emp, 'c3_2', 0) + getattr(carga_emp, 'c3_3', 0)
@@ -830,6 +823,7 @@ def dashboard_rrhh_view(request):
     }
     return render(request, 'equipos/dashboard_rrhh.html', context)
 
+
 @login_required(login_url='/cuentas/login/')
 def descargar_pdf_desempeno(request, id):
     ev = get_object_or_404(EvaluacionDesempeno, id=id, usuario_empresa=request.user)
@@ -841,17 +835,15 @@ def descargar_pdf_desempeno(request, id):
     p = canvas.Canvas(buffer, pagesize=letter)
     ancho, alto = letter
 
-    # Encabezado corporativo
     p.setFillColor(colors.HexColor("#0f172a"))
     p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
-    
+
     p.setFillColor(colors.white)
     p.setFont("Helvetica-Bold", 17)
     p.drawString(45, alto - 45, "INFORME INDIVIDUAL DE DESEMPEÑO (ISO 30414 / 10667)")
     p.setFont("Helvetica", 11)
     p.drawString(45, alto - 68, f"Empresa: {empresa_nombre}  |  Resultado Global: {ev.puntaje_total()}/75 pts ({ev.porcentaje_desempeno()}%)")
 
-    # 1. Datos del Colaborador
     y = alto - 125
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -871,7 +863,6 @@ def descargar_pdf_desempeno(request, id):
     p.drawString(55, y, f"Fecha Evaluación:  {fecha_str}")
     p.drawString(330, y, f"Nivel Global:   {baremo['nivel']}")
 
-    # 2. Resumen por Bloques BARS
     y -= 35
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -887,7 +878,6 @@ def descargar_pdf_desempeno(request, id):
     y -= 18
     p.drawString(55, y, f"• Bloque III - Convivencia Grupal y Cultura de Equipo:    {ev.puntaje_bloque_3()} / 25 pts")
 
-    # 3. Desglose de los 15 Reactivos
     y -= 35
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -913,7 +903,6 @@ def descargar_pdf_desempeno(request, id):
             p.drawString(320, y, f"{der_txt}: {der_val}/5")
         y -= 16
 
-    # 4. Dictamen Baremo y Acuerdos
     y -= 24
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -923,7 +912,6 @@ def descargar_pdf_desempeno(request, id):
     y -= 20
     p.setFont("Helvetica", 9)
     p.setFillColor(colors.black)
-    # Dividir texto largo de acción recomendada en dos líneas si es necesario
     accion_txt = baremo['accion']
     p.drawString(55, y, accion_txt[:95])
     if len(accion_txt) > 95:
@@ -969,10 +957,9 @@ def descargar_pdf_rrhh(request):
     p = canvas.Canvas(buffer, pagesize=letter)
     ancho, alto = letter
 
-    # Encabezado
     p.setFillColor(colors.HexColor("#0f172a"))
     p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
-    
+
     p.setFillColor(colors.white)
     p.setFont("Helvetica-Bold", 17)
     p.drawString(45, alto - 45, "REPORTE INTEGRAL DE TALENTO HUMANO (RRHH)")
@@ -981,7 +968,6 @@ def descargar_pdf_rrhh(request):
 
     y = alto - 130
 
-    # SECCIÓN 1: CARGA LABORAL
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
     p.drawString(45, y, "1. Diagnóstico de Carga Laboral y Saturación Operativa")
@@ -1011,7 +997,6 @@ def descargar_pdf_rrhh(request):
         p.setFont("Helvetica-Oblique", 10)
         p.drawString(55, y, "Este colaborador aún no posee registros en el módulo de Carga Laboral.")
 
-    # SECCIÓN 2: EVALUACIÓN DEL DESEMPEÑO
     y -= 45
     p.setFillColor(colors.HexColor("#1e293b"))
     p.setFont("Helvetica-Bold", 13)
@@ -1061,6 +1046,44 @@ def descargar_pdf_rrhh(request):
     return response
 
 
+@login_required(login_url='/cuentas/login/')
+def auditoria_iso30414_view(request):
+    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+
+    if request.method == 'POST':
+        if not auditoria:
+            auditoria = AuditoriaCapitalHumanoISO(usuario_empresa=request.user)
+
+        auditoria.periodo_reporte = request.POST.get('periodo_reporte', 'Anual 2026')
+        auditoria.total_empleados_fte = float(request.POST.get('total_empleados_fte') or 1)
+        auditoria.ingresos_totales = float(request.POST.get('ingresos_totales') or 0)
+        auditoria.costo_total_fuerza_laboral = float(request.POST.get('costo_total_fuerza_laboral') or 0)
+        auditoria.bajas_voluntarias = int(request.POST.get('bajas_voluntarias') or 0)
+        auditoria.bajas_involuntarias = int(request.POST.get('bajas_involuntarias') or 0)
+        auditoria.horas_capacitacion_totales = float(request.POST.get('horas_capacitacion_totales') or 0)
+        auditoria.dias_ausentismo_totales = float(request.POST.get('dias_ausentismo_totales') or 0)
+        auditoria.dias_laborables_periodo = int(request.POST.get('dias_laborables_periodo') or 250)
+        auditoria.declaracion_materialidad = request.POST.get('declaracion_materialidad', '')
+
+        for area in range(1, 12):
+            for item in (1, 2):
+                campo = f'a{area}_{item}'
+                setattr(auditoria, campo, int(request.POST.get(campo, 0)))
+
+        auditoria.save()
+        return redirect('auditoria_iso30414')
+
+    context = {
+        'auditoria': auditoria,
+        'areas_json': json.dumps(auditoria.puntajes_por_area() if auditoria else [0] * 11),
+    }
+    return render(request, 'equipos/auditoria_iso30414.html', context)
+
+
+# =========================================================================
+# SECCIÓN MASTER ADMIN (CENTRO DE CONTROL MULTI-EMPRESA)
+# =========================================================================
+
 def es_administrador(user):
     return user.is_staff or user.is_superuser
 
@@ -1069,14 +1092,17 @@ def es_administrador(user):
 @user_passes_test(es_administrador, login_url='/')
 def admin_dashboard_view(request):
     clientes = User.objects.filter(is_staff=False).order_by('-date_joined')
-    
+
     total_empresas = clientes.count()
     total_equipos_global = Computadora.objects.count()
     total_eval_ti = EvaluacionISO.objects.count()
     total_eval_mkt = EvaluacionMarketing.objects.count()
     total_eval_hr = EvaluacionCargaLaboral.objects.count()
-    total_eval_desemp = EvaluacionDesempeno.objects.count()  # Nueva auditoría integrada
-    total_evaluaciones_global = total_eval_ti + total_eval_mkt + total_eval_hr + total_eval_desemp
+    total_eval_desemp = EvaluacionDesempeno.objects.count()
+    total_eval_iso_hr = AuditoriaCapitalHumanoISO.objects.count()
+    total_evaluaciones_global = (
+        total_eval_ti + total_eval_mkt + total_eval_hr + total_eval_desemp + total_eval_iso_hr
+    )
 
     empresas_data = []
     nombres_empresas = []
@@ -1085,12 +1111,13 @@ def admin_dashboard_view(request):
     for cliente in clientes:
         perfil = Perfil.objects.filter(usuario=cliente).first()
         nombre_emp = perfil.nombre_empresa if perfil else f"Empresa ({cliente.username})"
-        
+
         eq_count = Computadora.objects.filter(usuario_empresa=cliente).count()
         tiene_ti = EvaluacionISO.objects.filter(usuario_empresa=cliente).exists()
         tiene_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).exists()
         hr_count = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).count()
-        desemp_count = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).count()  # Nuevo conteo
+        desemp_count = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).count()
+        tiene_iso_hr = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=cliente).exists()
 
         empresas_data.append({
             'user_id': cliente.id,
@@ -1103,8 +1130,9 @@ def admin_dashboard_view(request):
             'tiene_mkt': tiene_mkt,
             'hr_count': hr_count,
             'desemp_count': desemp_count,
+            'tiene_iso_hr': tiene_iso_hr,
         })
-        
+
         nombres_empresas.append(nombre_emp)
         cantidades_equipos.append(eq_count)
 
@@ -1116,6 +1144,7 @@ def admin_dashboard_view(request):
         'total_eval_mkt': total_eval_mkt,
         'total_eval_hr': total_eval_hr,
         'total_eval_desemp': total_eval_desemp,
+        'total_eval_iso_hr': total_eval_iso_hr,
         'empresas_data': empresas_data,
         'nombres_empresas': json.dumps(nombres_empresas),
         'cantidades_equipos': json.dumps(cantidades_equipos),
@@ -1135,6 +1164,7 @@ def admin_empresa_detalle_view(request, user_id):
     eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     evals_hr = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
     evals_desemp = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+    eval_iso_hr = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
 
     puntaje_ti = 0
     if eval_ti:
@@ -1155,7 +1185,8 @@ def admin_empresa_detalle_view(request, user_id):
         'eval_mkt': eval_mkt,
         'puntaje_mkt': puntaje_mkt,
         'evals_hr': evals_hr,
-        'evals_desemp': evals_desemp,  # Enviado al detalle para mostrarlo
+        'evals_desemp': evals_desemp,
+        'eval_iso_hr': eval_iso_hr,
     }
     return render(request, 'equipos/admin_empresa_detalle.html', context)
 
@@ -1226,6 +1257,16 @@ def exportar_reporte_csv(request, user_id):
             des.nombre_colaborador, des.cargo, des.departamento, des.perspectiva,
             f'{des.puntaje_total()} / 75', f'{des.porcentaje_desempeno()}%', baremo['nivel']
         ])
+    writer.writerow([])
+
+    writer.writerow(['--- 6. AUDITORIA CAPITAL HUMANO Y SOSTENIBILIDAD ESG (ISO 30414:2025) ---'])
+    iso_hr = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
+    if iso_hr:
+        writer.writerow(['Periodo:', iso_hr.periodo_reporte, 'Plantilla FTE:', iso_hr.total_empleados_fte, 'Cumplimiento ISO:', f'{iso_hr.porcentaje_cumplimiento_iso()}%'])
+        writer.writerow(['Productividad/FTE ($):', iso_hr.productividad_por_fte(), 'HCROI:', f'{iso_hr.roi_capital_humano()}x', 'Rotacion Total (%):', f'{iso_hr.tasa_rotacion_total()}%'])
+        writer.writerow(['Horas Formacion/FTE:', iso_hr.horas_formacion_por_fte(), 'Ausentismo (%):', f'{iso_hr.tasa_ausentismo()}%', 'Nivel ESG:', iso_hr.nivel_madurez_esg()['nivel']])
+    else:
+        writer.writerow(['Estado:', 'Pendiente por realizar'])
 
     return response
 
@@ -1242,12 +1283,12 @@ def exportar_reporte_pdf(request, user_id):
     eval_mkt = EvaluacionMarketing.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
     evals_hr = EvaluacionCargaLaboral.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
     evals_desemp = EvaluacionDesempeno.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion')
+    iso_hr = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=cliente).order_by('-fecha_evaluacion').first()
 
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
     ancho, alto = letter
 
-    # Encabezado corporativo
     p.setFillColor(colors.HexColor("#0f172a"))
     p.rect(0, alto - 85, ancho, 85, fill=True, stroke=False)
     p.setFillColor(colors.white)
@@ -1357,6 +1398,25 @@ def exportar_reporte_pdf(request, user_id):
         p.drawString(55, y, "• Sin evaluaciones de desempeño registradas.")
         y -= 15
 
+    # 6. Auditoría ISO 30414:2025 (ESG)
+    y -= 12
+    verificar_salto(75)
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "6. Auditoría de Capital Humano y Sostenibilidad ESG (ISO 30414:2025)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 20
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    if iso_hr:
+        p.drawString(55, y, f"• Período: {iso_hr.periodo_reporte} | Cumplimiento ISO: {iso_hr.porcentaje_cumplimiento_iso()}% ({iso_hr.nivel_madurez_esg()['nivel']})")
+        y -= 15
+        p.drawString(55, y, f"• Plantilla FTE: {iso_hr.total_empleados_fte} | Productividad/FTE: ${iso_hr.productividad_por_fte()} | HCROI: {iso_hr.roi_capital_humano()}x | Rotación: {iso_hr.tasa_rotacion_total()}%")
+        y -= 15
+    else:
+        p.drawString(55, y, "• Auditoría ISO 30414:2025 pendiente por realizar.")
+        y -= 15
+
     p.setFont("Helvetica", 8)
     p.setFillColor(colors.gray)
     p.drawString(45, 35, "Reporte generado desde el Centro de Control Multi-Empresa (Master Admin).")
@@ -1367,4 +1427,125 @@ def exportar_reporte_pdf(request, user_id):
     buffer.seek(0)
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Reporte_Ejecutivo_{cliente.username}.pdf"'
+    return response
+@login_required(login_url='/cuentas/login/')
+def descargar_pdf_iso30414(request):
+    auditoria = AuditoriaCapitalHumanoISO.objects.filter(usuario_empresa=request.user).order_by('-fecha_evaluacion').first()
+    perfil = Perfil.objects.filter(usuario=request.user).first()
+    empresa_nombre = perfil.nombre_empresa if perfil else request.user.username
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    ancho, alto = letter
+
+    # Encabezado corporativo
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.rect(0, alto - 90, ancho, 90, fill=True, stroke=False)
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(45, alto - 42, "INFORME DE CAPITAL HUMANO Y SOSTENIBILIDAD ESG (ISO 30414:2025)")
+    p.setFont("Helvetica", 10)
+    if auditoria:
+        nivel_info = auditoria.nivel_madurez_esg()
+        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Período: {auditoria.periodo_reporte}  |  Cumplimiento: {auditoria.porcentaje_cumplimiento_iso()}% ({nivel_info['nivel']})")
+    else:
+        p.drawString(45, alto - 66, f"Empresa: {empresa_nombre}  |  Sin auditoría registrada")
+
+    y = alto - 125
+
+    if not auditoria:
+        p.setFillColor(colors.black)
+        p.setFont("Helvetica", 11)
+        p.drawString(45, y, "Aún no se han registrado datos en el módulo de Auditoría ISO 30414:2025.")
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Reporte_ISO30414_{empresa_nombre}.pdf"'
+        return response
+
+    # 1. Indicadores Cuantitativos Directivos
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "1. Indicadores Cuantitativos Obligatorios (KPIs Directivos)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+
+    y -= 22
+    p.setFont("Helvetica", 10)
+    p.setFillColor(colors.black)
+    p.drawString(55, y, f"• Plantilla Activa (FTE):        {auditoria.total_empleados_fte} colaboradores")
+    p.drawString(320, y, f"• Productividad por FTE:      ${auditoria.productividad_por_fte()}")
+    y -= 18
+    p.drawString(55, y, f"• Ingresos Totales Período:      ${auditoria.ingresos_totales}")
+    p.drawString(320, y, f"• ROI Capital Humano (HCROI): {auditoria.roi_capital_humano()}x")
+    y -= 18
+    p.drawString(55, y, f"• Costo Total Fuerza Laboral:    ${auditoria.costo_total_fuerza_laboral}")
+    p.drawString(320, y, f"• Tasa Rotación Total:        {auditoria.tasa_rotacion_total()}% (Vol: {auditoria.tasa_rotacion_voluntaria()}%)")
+    y -= 18
+    p.drawString(55, y, f"• Formación por FTE:             {auditoria.horas_formacion_por_fte()} hrs/FTE")
+    p.drawString(320, y, f"• Tasa de Ausentismo:         {auditoria.tasa_ausentismo()}%")
+
+    # 2. Desglose de las 11 Áreas ISO 30414:2025
+    y -= 34
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, f"2. Evaluación de Madurez por Área ISO 30414:2025 ({auditoria.puntaje_esg_total()}/44 pts - {auditoria.porcentaje_cumplimiento_iso()}%)")
+    p.line(45, y - 4, ancho - 45, y - 4)
+
+    y -= 20
+    p.setFont("Helvetica", 9)
+    areas_nombres = [
+        "1. Composición de Fuerza Laboral",
+        "2. Diversidad e Inclusión",
+        "3. Costos de Capital Humano",
+        "4. Productividad y Valor Económico",
+        "5. Salud, Seguridad y Bienestar Psicológico",
+        "6. Liderazgo, Cultura y Compromiso",
+        "7. Cumplimiento, Ética y Derechos Humanos",
+        "8. Reclutamiento y Atracción",
+        "9. Movilidad Interna y Sucesión",
+        "10. Rotación y Retención de Talento",
+        "11. Habilidades, Desarrollo y Gobernanza IA",
+    ]
+    puntajes_areas = auditoria.puntajes_por_area()
+
+    for idx, nombre_area in enumerate(areas_nombres):
+        pts = puntajes_areas[idx]
+        if pts == 4:
+            estado_txt = "Auditado y Consolidado (4/4 pts)"
+        elif pts >= 2:
+            estado_txt = f"En Desarrollo / Parcial ({pts}/4 pts)"
+        else:
+            estado_txt = f"Brecha Crítica / Inicial ({pts}/4 pts)"
+
+        p.setFillColor(colors.black)
+        p.drawString(55, y, f"{nombre_area}:")
+        p.drawString(310, y, estado_txt)
+        y -= 16
+
+    # 3. Declaración de Materialidad ESG
+    y -= 18
+    p.setFillColor(colors.HexColor("#1e293b"))
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(45, y, "3. Declaración de Materialidad ESG y Justificación Directiva")
+    p.line(45, y - 4, ancho - 45, y - 4)
+    y -= 18
+    p.setFont("Helvetica", 9)
+    p.setFillColor(colors.black)
+    mat_txt = auditoria.declaracion_materialidad.strip() or "Sin observaciones de materialidad registradas para este período."
+    p.drawString(55, y, mat_txt[:105])
+    if len(mat_txt) > 105:
+        y -= 14
+        p.drawString(55, y, mat_txt[105:210])
+
+    p.setFont("Helvetica", 8)
+    p.setFillColor(colors.gray)
+    p.drawString(45, 35, "Documento generado por AuditTech bajo estándares ISO 30414:2025 de Capital Humano y Sostenibilidad ESG.")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Auditoria_ISO30414_{empresa_nombre}.pdf"'
     return response
